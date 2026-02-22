@@ -1,0 +1,123 @@
+[dotenv@17.3.1] injecting env (3) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+🚀 NexHire Server running on port 5001
+Connecting to SQL Server...
+✅ Successfully connected to SQL Server!
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] POST /api/auth/login
+[REQ] POST /api/auth/login
+[REQ] GET /api/jobs
+[REQ] GET /api/analytics/stats
+[REQ] GET /api/jobs
+[REQ] GET /api/analytics/stats
+[REQ] GET /api/analytics/risk-alerts
+[REQ] GET /api/analytics/risk-alerts
+[REQ] GET /api/analytics/funnel
+[REQ] GET /api/analytics/funnel
+[REQ] GET /api/jobs/20
+[REQ] GET /api/jobs/20/matches
+[REQ] GET /api/jobs/20/applications
+[REQ] POST /api/auth/login
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/skills
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/status
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/skills
+[REQ] POST /api/candidates/skills
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/candidates/assessments
+[REQ] POST /api/candidates/apply
+=== /APPLY ENDPOINT HIT ===
+Request Body: { jobID: 20 }
+[REQ] POST /api/auth/login
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/profile/skills
+[REQ] POST /api/candidates/apply
+=== /APPLY ENDPOINT HIT ===
+Request Body: { jobID: 20 }
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] POST /api/candidates/apply
+=== /APPLY ENDPOINT HIT ===
+Request Body: { jobID: 19 }
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/profile/skills
+[REQ] GET /api/candidates/discover
+[REQ] GET /api/candidates/applications
+[REQ] GET /api/candidates/interviews
+[REQ] GET /api/candidates/assessments
+[REQ] GET /api/candidates/profile/skills

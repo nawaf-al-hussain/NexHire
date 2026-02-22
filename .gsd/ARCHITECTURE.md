@@ -25,9 +25,11 @@ NexHire is a dual-layer recruitment platform consisting of a React-based fronten
 - **Purpose:** User interface for Admins, Recruiters, and Candidates.
 - **Location:** `client/`
 - **Dashboards:**
-  - `AdminDashboard.jsx`: Analytics, User Management, Logs.
-  - `RecruiterDashboard.jsx`: Job Posting, Candidate Matching, Interviewing.
-  - `CandidateDashboard.jsx`: Job Search, Profile Management, Tracking.
+  - `AdminDashboard.jsx`: Analytics, User Management, Logs, Maintenance (GDPR).
+  - `RecruiterDashboard.jsx`: Job Posting, Candidate Matching, Interviewing, Global Talent Sync.
+- **Intelligence Components:**
+  - `SkillMatrix.jsx`: Visual "Match vs. Gap" proficiency grid.
+  - `JobMatchingView.jsx`: Global talent synchronization dashboard.
 - **Styling:** Tailwind CSS v4 (Glassmorphism + Neon/Premium theme).
 
 ### Backend (Server)

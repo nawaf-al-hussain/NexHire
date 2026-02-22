@@ -1,10 +1,11 @@
 # TODO.md
 
 ## Active
-- [ ] Review SPEC.md and ROADMAP.md with user
-- [ ] Launch Phase 1: Foundation (Auth & Recruitment logic)
+- [ ] Finalize CLR-enhanced Resume Parsing (Phase 2 completion)
+- [ ] Implement Phase 3: Automated Screening Bot
+- [ ] Perform security audit for database connection strings
 
 ## Backlog
-- [ ] Parameterize all existing Express routes
+- [x] Parameterize all existing Express routes [COMPLETED]
 - [ ] Modularize monolithic Dashboard pages
-- [ ] Implement CLR-based resume processing tests
+- [ ] Implement end-to-end Cypress tests for Matching Flow

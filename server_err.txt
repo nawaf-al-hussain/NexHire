@@ -1,0 +1,58 @@
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'LastUpdateDate'.
+SQL: SELECT TOP 5 * FROM vw_SilentRejections ORDER BY LastUpdateDate ASC
+Risk Alerts Analytics Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'LastUpdateDate'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'ProbableGhosting'.
+SQL: SELECT TOP 5 * FROM vw_GhostingRiskDashboard WHERE ProbableGhosting = 1
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'LastUpdateDate'.
+SQL: SELECT TOP 5 * FROM vw_SilentRejections ORDER BY LastUpdateDate ASC
+Risk Alerts Analytics Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'LastUpdateDate'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'ProbableGhosting'.
+SQL: SELECT TOP 5 * FROM vw_GhostingRiskDashboard WHERE ProbableGhosting = 1
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid action type or action is not active.
+SQL: EXEC sp_AwardGamificationPoints ?, 'Application'
+Gamification Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid action type or action is not active.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid action type or action is not active.
+SQL: EXEC sp_AwardGamificationPoints ?, 'Application'
+Gamification Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid action type or action is not active.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+Database Query Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
+SQL: SELECT a.ApplicationID, a.AppliedDate, s.StatusName, j.JobTitle, j.Location, j.Description, j.MinExperience, j.Vacancies, a.RejectionReason, a.WithdrawalReason, a.MatchScore FROM Applications a JOIN Candidates c ON a.CandidateID = c.CandidateID JOIN JobPostings j ON a.JobID = j.JobID JOIN ApplicationStatus s ON a.StatusID = s.StatusID WHERE c.UserID = ? AND a.IsDeleted = 0 ORDER BY a.AppliedDate DESC
+Fetch Candidate Applications Error: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'MatchScore'.
