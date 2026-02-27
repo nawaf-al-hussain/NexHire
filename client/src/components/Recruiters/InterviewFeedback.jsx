@@ -1,0 +1,243 @@
+import React, { useState, useEffect } from 'react';
+import { Star, Send, X, User, Briefcase, MessageSquare, TrendingUp, AlertCircle } from 'lucide-react';
+import axios from 'axios';
+import API_BASE from '../../apiConfig';
+
+const InterviewFeedback = ({ applicationId, candidateName, jobTitle, onClose, onSubmitSuccess }) => {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [existingFeedback, setExistingFeedback] = useState(null);
+    const [scores, setScores] = useState({
+        technical: 5,
+        communication: 5,
+        cultureFit: 5
+    });
+    const [comments, setComments] = useState('');
+
+    useEffect(() => {
+        if (applicationId) {
+            fetchExistingFeedback();
+        }
+    }, [applicationId]);
+
+    const fetchExistingFeedback = async () => {
+        try {
+            const res = await axios.get(`${API_BASE}/interviews/feedback/${applicationId}`);
+            if (res.data && res.data.length > 0) {
+                setExistingFeedback(res.data);
+                // Pre-fill with latest feedback if available
+                const latest = res.data[0];
+                setScores({
+                    technical: latest.TechnicalScore,
+                    communication: latest.CommunicationScore,
+                    cultureFit: latest.CultureFitScore
+                });
+                setComments(latest.Comments || '');
+            }
+        } catch (err) {
+            console.error("Fetch feedback error:", err);
+        }
+    };
+
+    const handleScoreChange = (category, value) => {
+        setScores(prev => ({
+            ...prev,
+            [category]: value
+        }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
+        try {
+            const res = await axios.post(`${API_BASE}/interviews/feedback`, {
+                applicationId,
+                technicalScore: scores.technical,
+                communicationScore: scores.communication,
+                cultureFitScore: scores.cultureFit,
+                comments
+            });
+
+            if (res.data.success) {
+                if (onSubmitSuccess) onSubmitSuccess(res.data.feedbackId);
+                if (onClose) onClose();
+            }
+        } catch (err) {
+            setError(err.response?.data?.error || 'Failed to submit feedback. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const ScoreSlider = ({ label, category, value, color }) => (
+        <div className="mb-6">
+            <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-black uppercase tracking-widest text-[var(--text-secondary)]">
+                    {label}
+                </span>
+                <span className={`text-lg font-black ${color}`}>{value}/10</span>
+            </div>
+            <input
+                type="range"
+                min="1"
+                max="10"
+                value={value}
+                onChange={(e) => handleScoreChange(category, parseInt(e.target.value))}
+                className="w-full h-2 bg-[var(--bg-accent)] rounded-lg appearance-none cursor-pointer accent-purple-500"
+            />
+            <div className="flex justify-between mt-1">
+                <span className="text-[8px] font-bold text-[var(--text-muted)]">Poor</span>
+                <span className="text-[8px] font-bold text-[var(--text-muted)]">Excellent</span>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="glass-card rounded-[3rem] p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 className="text-xl font-black uppercase tracking-tight">Interview Feedback</h2>
+                        <div className="flex items-center gap-2 mt-2 text-[10px] font-bold text-[var(--text-muted)]">
+                            <User size={12} />
+                            <span>{candidateName || 'Candidate'}</span>
+                            <span className="text-purple-500">•</span>
+                            <Briefcase size={12} />
+                            <span>{jobTitle || 'Position'}</span>
+                        </div>
+                    </div>
+                    {onClose && (
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-full hover:bg-[var(--bg-accent)] transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+                    )}
+                </div>
+
+                {/* Existing Feedback Summary */}
+                {existingFeedback && existingFeedback.averageScores && (
+                    <div className="mb-6 p-4 bg-purple-500/10 rounded-2xl border border-purple-500/20">
+                        <div className="flex items-center gap-2 mb-3">
+                            <TrendingUp size={16} className="text-purple-500" />
+                            <span className="text-xs font-black uppercase tracking-widest text-purple-500">Current Average</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-center">
+                            <div>
+                                <div className="text-lg font-black text-purple-500">{existingFeedback.averageScores.technical}</div>
+                                <div className="text-[8px] font-bold text-[var(--text-muted)]">TECHNICAL</div>
+                            </div>
+                            <div>
+                                <div className="text-lg font-black text-purple-500">{existingFeedback.averageScores.communication}</div>
+                                <div className="text-[8px] font-bold text-[var(--text-muted)]">COMM</div>
+                            </div>
+                            <div>
+                                <div className="text-lg font-black text-purple-500">{existingFeedback.averageScores.cultureFit}</div>
+                                <div className="text-[8px] font-bold text-[var(--text-muted)]">CULTURE</div>
+                            </div>
+                            <div>
+                                <div className="text-lg font-black text-purple-500">{existingFeedback.averageScores.overall}</div>
+                                <div className="text-[8px] font-bold text-[var(--text-muted)]">OVERALL</div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Error Message */}
+                {error && (
+                    <div className="mb-4 p-3 bg-rose-500/10 rounded-xl border border-rose-500/20 flex items-center gap-2">
+                        <AlertCircle size={16} className="text-rose-500" />
+                        <span className="text-xs font-bold text-rose-500">{error}</span>
+                    </div>
+                )}
+
+                {/* Score Sliders */}
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-6">
+                        <h3 className="text-xs font-black uppercase tracking-widest mb-4 text-[var(--text-muted)]">
+                            Score Categories
+                        </h3>
+
+                        <ScoreSlider
+                            label="Technical Skills"
+                            category="technical"
+                            value={scores.technical}
+                            color="text-blue-500"
+                        />
+                        <ScoreSlider
+                            label="Communication"
+                            category="communication"
+                            value={scores.communication}
+                            color="text-emerald-500"
+                        />
+                        <ScoreSlider
+                            label="Culture Fit"
+                            category="cultureFit"
+                            value={scores.cultureFit}
+                            color="text-purple-500"
+                        />
+                    </div>
+
+                    {/* Overall Score Display */}
+                    <div className="mb-6 p-4 bg-[var(--bg-accent)] rounded-2xl border border-[var(--border-primary)]">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">
+                                Overall Score
+                            </span>
+                            <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                        key={star}
+                                        size={20}
+                                        className={star <= Math.round((scores.technical + scores.communication + scores.cultureFit) / 3)
+                                            ? 'fill-yellow-400 text-yellow-400'
+                                            : 'text-gray-300'}
+                                    />
+                                ))}
+                                <span className="ml-2 text-lg font-black text-[var(--text-primary)]">
+                                    {((scores.technical + scores.communication + scores.cultureFit) / 3).toFixed(1)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Comments */}
+                    <div className="mb-6">
+                        <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-3">
+                            <MessageSquare size={14} />
+                            Additional Comments
+                        </label>
+                        <textarea
+                            value={comments}
+                            onChange={(e) => setComments(e.target.value)}
+                            placeholder="Enter interviewer comments, strengths, areas for improvement..."
+                            className="w-full h-32 p-4 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl text-sm focus:outline-none focus:border-purple-500 resize-none"
+                        />
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest hover:from-purple-500 hover:to-indigo-500 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        {loading ? (
+                            'Submitting...'
+                        ) : (
+                            <>
+                                <Send size={16} />
+                                Submit Feedback
+                            </>
+                        )}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+export default InterviewFeedback;

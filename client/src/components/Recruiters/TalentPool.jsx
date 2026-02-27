@@ -1,13 +1,20 @@
 import React from 'react';
-import { Users, Search, Target, AlertCircle, FileText, MapPin, Briefcase, Filter, ChevronRight, Sparkles, Share2, Globe, UserPlus } from 'lucide-react';
+import { Users, Search, Filter, UserPlus, Sparkles as FuzzyIcon, Loader2, User } from 'lucide-react';
 import axios from 'axios';
 import API_BASE from '../../apiConfig';
+import CandidateProfileModal from './CandidateProfileModal';
 
 const TalentPool = () => {
     const [candidates, setCandidates] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [searchQuery, setSearchQuery] = React.useState('');
     const [isSearching, setIsSearching] = React.useState(false);
+    const [useFuzzySearch, setUseFuzzySearch] = React.useState(false);
+    const [selectedCandidates, setSelectedCandidates] = React.useState([]);
+    const [inviteModal, setInviteModal] = React.useState(null);
+    const [jobs, setJobs] = React.useState([]);
+    const [inviting, setInviting] = React.useState(false);
+    const [profileModal, setProfileModal] = React.useState({ isOpen: false, candidateId: null, candidateName: '' });
 
     const fetchPool = React.useCallback(async () => {
         setLoading(true);
@@ -28,23 +35,54 @@ const TalentPool = () => {
     const handleSearch = async (e) => {
         const val = e.target.value;
         setSearchQuery(val);
+
+        // Clear search if empty
+        if (val.length === 0) {
+            fetchPool();
+            return;
+        }
+
+        // Wait for at least 2 characters
         if (val.length < 2) {
-            if (val.length === 0) fetchPool();
             return;
         }
 
         setIsSearching(true);
         try {
-            const res = await axios.post(`${API_BASE}/recruiters/search`, { name: val });
-            // Since fuzzy search only returns ID/Name/Scores, we map back to full candidate data if possible
-            // or just show the fuzzy results. For UX, we'll fetch full data for those IDs
-            if (res.data.length > 0) {
-                setCandidates(res.data); // Simplified for now, in production we'd join more data
-            }
+            const res = await axios.post(`${API_BASE}/recruiters/search`, {
+                name: val,
+                useFuzzy: useFuzzySearch
+            });
+            console.log("Search results:", res.data);
+            setCandidates(res.data || []);
         } catch (err) {
             console.error("Search Error:", err);
+            // On error, fall back to showing all candidates
+            fetchPool();
         } finally {
             setIsSearching(false);
+        }
+    };
+
+    const handleFuzzyToggle = async () => {
+        const newFuzzyState = !useFuzzySearch;
+        setUseFuzzySearch(newFuzzyState);
+
+        // Re-run search if there's a search query
+        if (searchQuery.length >= 2) {
+            setIsSearching(true);
+            try {
+                const res = await axios.post(`${API_BASE}/recruiters/search`, {
+                    name: searchQuery,
+                    useFuzzy: newFuzzyState
+                });
+                setCandidates(res.data || []);
+            } catch (err) {
+                console.error("Search Error:", err);
+                fetchPool();
+            } finally {
+                setIsSearching(false);
+            }
         }
     };
 
@@ -56,117 +94,252 @@ const TalentPool = () => {
         }
     };
 
+    const toggleSelection = (candidateID) => {
+        setSelectedCandidates(prev =>
+            prev.includes(candidateID)
+                ? prev.filter(id => id !== candidateID)
+                : [...prev, candidateID]
+        );
+    };
+
+    const fetchJobs = async () => {
+        try {
+            const res = await axios.get(`${API_BASE}/jobs`);
+            setJobs(res.data);
+        } catch (err) {
+            console.error("Fetch Jobs Error:", err);
+        }
+    };
+
+    const openInviteModal = () => {
+        if (selectedCandidates.length === 0) {
+            alert("Please select candidates to invite.");
+            return;
+        }
+        fetchJobs();
+        setInviteModal({ jobID: '' });
+    };
+
+    const handleInvite = async () => {
+        if (!inviteModal?.jobID) {
+            alert("Please select a job.");
+            return;
+        }
+        try {
+            setInviting(true);
+            const res = await axios.post(`${API_BASE}/recruiters/talent-pool/invite`, {
+                candidateIDs: selectedCandidates,
+                jobID: parseInt(inviteModal.jobID)
+            });
+            alert(res.data.message);
+            setInviteModal(null);
+            setSelectedCandidates([]);
+        } catch (err) {
+            console.error("Invite Error:", err);
+            alert("Failed to invite: " + (err.response?.data?.error || err.message));
+        } finally {
+            setInviting(false);
+        }
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Invite Button */}
+            {selectedCandidates.length > 0 && (
+                <div className="flex items-center justify-between p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
+                    <span className="text-xs font-black">{selectedCandidates.length} candidate(s) selected</span>
+                    <button
+                        onClick={openInviteModal}
+                        className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-500 transition-all"
+                    >
+                        <UserPlus size={16} /> Invite to Job
+                    </button>
+                </div>
+            )}
+
             {/* Search & Filters */}
             <div className="flex flex-col md:flex-row gap-6 items-center">
                 <div className="relative flex-1 group w-full">
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-indigo-500 transition-colors" size={20} />
                     <input
                         type="text"
-                        placeholder="Fuzzy Search Talent Pool (e.g. 'Jhon' for 'John')..."
+                        placeholder={useFuzzySearch ? "Fuzzy Search (e.g. 'Jhon' finds 'John')..." : "Search candidates..."}
                         value={searchQuery}
                         onChange={handleSearch}
-                        className="w-full bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-[2rem] py-5 pl-16 pr-8 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                        className="w-full bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-indigo-500 transition-all"
                     />
                     {isSearching && (
                         <div className="absolute right-6 top-1/2 -translate-y-1/2">
-                            <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                            <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
                         </div>
                     )}
                 </div>
-                <button className="p-5 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-[1.5rem] hover:border-indigo-500/50 transition-all">
-                    <Filter size={20} className="text-[var(--text-muted)]" />
+                <button
+                    onClick={handleFuzzyToggle}
+                    className={`p-4 border rounded-2xl transition-all flex items-center gap-2 ${useFuzzySearch ? 'bg-purple-500/10 border-purple-500/50 text-purple-500' : 'bg-[var(--bg-accent)] border-[var(--border-primary)] hover:border-indigo-500/50'}`}
+                    title={useFuzzySearch ? "Fuzzy search ON - Click for regular search" : "Click for Fuzzy search"}
+                >
+                    <FuzzyIcon size={18} />
+                </button>
+                <button className="p-4 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl hover:border-indigo-500/50 transition-all">
+                    <Filter size={18} className="text-[var(--text-muted)]" />
                 </button>
             </div>
 
-            {/* Talent Grid */}
+            {/* Talent Table */}
             {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {[1, 2, 3, 4, 5, 6].map(i => (
-                        <div key={i} className="glass-card h-64 rounded-[2.5rem] animate-pulse"></div>
-                    ))}
+                <div className="glass-card rounded-[3rem] p-8 animate-pulse">
+                    <div className="h-8 bg-[var(--bg-accent)] rounded-xl w-1/3 mb-8"></div>
+                    <div className="space-y-4">
+                        {[1, 2, 3, 4, 5].map(i => (
+                            <div key={i} className="h-16 bg-[var(--bg-accent)] rounded-xl"></div>
+                        ))}
+                    </div>
                 </div>
             ) : candidates.length === 0 ? (
-                <div className="glass-card rounded-[3rem] p-20 text-center">
-                    <div className="w-20 h-20 bg-indigo-500/5 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-                        <Users className="text-indigo-500/30" size={32} />
-                    </div>
-                    <h3 className="text-xl font-black uppercase tracking-tight">No Candidates Found</h3>
-                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mt-2 italic">Try adjusting your search criteria</p>
+                <div className="p-12 border-2 border-dashed border-[var(--border-primary)] rounded-[3rem] text-center bg-[var(--bg-accent)]/5">
+                    <Users className="w-16 h-16 text-[var(--text-muted)] mx-auto mb-6 opacity-20" />
+                    <p className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest italic opacity-40 mb-4">
+                        No data available.
+                    </p>
+                    <p className="text-[10px] text-[var(--text-muted)] opacity-60">
+                        Try adjusting your search criteria.
+                    </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {candidates.map((candidate) => (
-                        <div key={candidate.CandidateID} className="glass-card rounded-[2.5rem] p-8 group hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-2 transition-all duration-500 border border-transparent hover:border-indigo-500/20">
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/20">
-                                    {candidate.FullName.charAt(0)}
-                                </div>
-                                <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${getRiskColor(candidate.GhostingRisk)}`}>
-                                    Risk: {candidate.GhostingRisk || 'Low'}
-                                </div>
-                            </div>
-
-                            <div className="mb-6">
-                                <h3 className="text-lg font-black tracking-tight mb-1 group-hover:text-indigo-500 transition-colors">{candidate.FullName}</h3>
-                                <div className="flex items-center gap-3 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                                    <span className="flex items-center gap-1.5"><MapPin size={12} className="text-indigo-500" /> {candidate.Location || 'Remote'}</span>
-                                    <span className="w-1 h-1 bg-[var(--border-primary)] rounded-full"></span>
-                                    <span className="flex items-center gap-1.5"><Briefcase size={12} className="text-emerald-500" /> {candidate.YearsExperience}y Exp</span>
-                                </div>
-                                {/* Referral Source Badge */}
-                                <div className="mt-3">
-                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${candidate.ReferralSource === 'Employee Referral' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' :
-                                            candidate.ReferralSource === 'LinkedIn' ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' :
-                                                candidate.ReferralSource === 'Indeed' ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' :
-                                                    candidate.ReferralSource === 'Glassdoor' ? 'bg-purple-500/10 border-purple-500/30 text-purple-500' :
-                                                        'bg-slate-500/10 border-slate-500/30 text-slate-500'
-                                        }`}>
-                                        <Share2 size={10} />
-                                        {candidate.ReferralSource || 'Direct Application'}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Resume Quality & Skills */}
-                            <div className="space-y-4 mb-8">
-                                <div className="p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500 flex items-center gap-2">
-                                            <FileText size={12} /> Resume Score
-                                        </span>
-                                        <span className="text-xs font-black">{candidate.ResumeScore || 0}%</span>
-                                    </div>
-                                    <div className="w-full h-1.5 bg-[var(--bg-accent)] rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
-                                            style={{ width: `${candidate.ResumeScore || 0}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                    {candidate.Skills ? candidate.Skills.split(', ').slice(0, 3).map((skill, i) => (
-                                        <span key={i} className="px-3 py-1.5 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-xl text-[9px] font-bold tracking-tight">
-                                            {skill}
-                                        </span>
-                                    )) : (
-                                        <span className="text-[9px] font-bold text-[var(--text-muted)] italic">No skills extracted</span>
-                                    )}
-                                    {candidate.Skills && candidate.Skills.split(', ').length > 3 && (
-                                        <span className="px-3 py-1.5 text-[9px] font-black text-indigo-500">+{candidate.Skills.split(', ').length - 3}</span>
-                                    )}
-                                </div>
-                            </div>
-
-                            <button className="w-full py-4 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 group-hover:bg-indigo-600 group-hover:border-indigo-600 group-hover:text-white transition-all shadow-xl shadow-transparent group-hover:shadow-indigo-500/30">
-                                View Profile <ChevronRight size={14} />
-                            </button>
-                        </div>
-                    ))}
+                <div className="glass-card rounded-[3rem] p-8">
+                    <h3 className="text-lg font-black uppercase tracking-tight mb-6">Talent Pool ({candidates.length} candidates)</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)] border-b border-[var(--border-primary)]">
+                                    <th className="text-left pb-4 pr-4 w-12">
+                                        <input type="checkbox" className="w-4 h-4 accent-indigo-500" />
+                                    </th>
+                                    <th className="text-left pb-4 pr-4">Candidate</th>
+                                    <th className="text-left pb-4 pr-4">Location</th>
+                                    <th className="text-left pb-4 pr-4">Experience</th>
+                                    <th className="text-left pb-4 pr-4">Skills</th>
+                                    <th className="text-left pb-4 pr-4">Resume</th>
+                                    <th className="text-left pb-4 pr-4">Risk</th>
+                                    <th className="text-left pb-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[var(--border-primary)]">
+                                {candidates.map((candidate) => (
+                                    <tr key={candidate.CandidateID} className="group hover:bg-[var(--bg-accent)] transition-colors cursor-pointer" onClick={() => setProfileModal({ isOpen: true, candidateId: candidate.CandidateID, candidateName: candidate.FullName })}>
+                                        <td className="py-4 pr-4" onClick={(e) => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedCandidates.includes(candidate.CandidateID)}
+                                                onChange={() => toggleSelection(candidate.CandidateID)}
+                                                className="w-4 h-4 accent-indigo-500"
+                                            />
+                                        </td>
+                                        <td className="py-4 pr-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                                    <User size={20} />
+                                                </div>
+                                                <span className="text-sm font-black group-hover:text-indigo-500 transition-colors">{candidate.FullName}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 pr-4">
+                                            <span className="text-xs font-bold text-[var(--text-secondary)]">{candidate.Location || 'Remote'}</span>
+                                        </td>
+                                        <td className="py-4 pr-4">
+                                            <span className="text-xs font-bold text-[var(--text-secondary)]">{candidate.YearsExperience || 0} years</span>
+                                        </td>
+                                        <td className="py-4 pr-4">
+                                            <div className="flex flex-wrap gap-1">
+                                                {candidate.Skills ? candidate.Skills.split(', ').slice(0, 3).map((skill, i) => (
+                                                    <span key={i} className="px-2 py-1 bg-indigo-500/10 text-indigo-600 rounded-lg text-[9px] font-medium">
+                                                        {skill.trim()}
+                                                    </span>
+                                                )) : (
+                                                    <span className="text-[9px] text-[var(--text-muted)]">-</span>
+                                                )}
+                                                {candidate.Skills && candidate.Skills.split(', ').length > 3 && (
+                                                    <span className="px-2 py-1 text-[9px] font-bold text-indigo-500">+{candidate.Skills.split(', ').length - 3}</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="py-4 pr-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-16 h-2 bg-[var(--bg-accent)] rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-indigo-500 rounded-full"
+                                                        style={{ width: `${candidate.ResumeScore || 0}%` }}
+                                                    ></div>
+                                                </div>
+                                                <span className="text-[9px] font-black text-indigo-500">{candidate.ResumeScore || 0}%</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 pr-4">
+                                            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${getRiskColor(candidate.GhostingRisk)}`}>
+                                                {candidate.GhostingRisk || 'Low'}
+                                            </span>
+                                        </td>
+                                        <td className="py-4" onClick={(e) => e.stopPropagation()}>
+                                            <button className="px-4 py-2 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:border-indigo-500 hover:text-white transition-all">
+                                                View
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
+
+            {/* Invite Modal */}
+            {inviteModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-[var(--bg-secondary)] rounded-[2.5rem] p-8 w-full max-w-md border border-[var(--border-primary)]">
+                        <h3 className="text-lg font-black uppercase tracking-tight mb-2">Invite Candidates</h3>
+                        <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-6">
+                            {selectedCandidates.length} candidate(s) selected
+                        </p>
+                        <div className="mb-6">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] block mb-2">Select Job</label>
+                            <select
+                                value={inviteModal.jobID}
+                                onChange={(e) => setInviteModal({ ...inviteModal, jobID: e.target.value })}
+                                className="w-full bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-indigo-500"
+                            >
+                                <option value="">Select a job...</option>
+                                {jobs.map(job => (
+                                    <option key={job.JobID} value={job.JobID}>{job.JobTitle}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setInviteModal(null)}
+                                className="flex-1 px-4 py-3 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500/10 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleInvite}
+                                disabled={inviting}
+                                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 transition-all disabled:opacity-50"
+                            >
+                                {inviting ? 'Inviting...' : 'Send Invites'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Candidate Profile Modal */}
+            <CandidateProfileModal
+                isOpen={profileModal.isOpen}
+                onClose={() => setProfileModal({ isOpen: false, candidateId: null, candidateName: '' })}
+                candidateId={profileModal.candidateId}
+                candidateName={profileModal.candidateName}
+            />
         </div>
     );
 };

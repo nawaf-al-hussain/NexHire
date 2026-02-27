@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, CheckCircle, XCircle, Clock, Award, AlertTriangle } from 'lucide-react';
+import { Shield, CheckCircle, XCircle, Clock, Award, AlertTriangle, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import API_BASE from '../../apiConfig';
 
@@ -61,7 +61,10 @@ const SkillVerificationStatus = () => {
 
     if (loading) {
         return (
-            <div className="glass-card h-96 rounded-[3rem] animate-pulse"></div>
+            <div className="flex items-center justify-center py-20">
+                <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
+                <span className="ml-3 text-sm font-black uppercase tracking-widest text-[var(--text-muted)]">Loading Skill Verification...</span>
+            </div>
         );
     }
 

@@ -163,7 +163,8 @@ VALUES
 ('Interview'),
 ('Hired'),
 ('Rejected'),
-('Withdrawn');
+('Withdrawn'),
+('Invited');
 GO
 
 -- Status Transitions Table (State Machine)
@@ -184,7 +185,9 @@ INSERT INTO ApplicationStatusTransitions VALUES
 (3, 5), -- Interview → Rejected
 (1, 6), -- Applied → Withdrawn
 (2, 6), -- Screening → Withdrawn
-(3, 6); -- Interview → Withdrawn
+(3, 6), -- Interview → Withdrawn
+(7, 1), -- Invited → Applied
+(7, 6); -- Invited → Withdrawn
 GO
 
 -- ============================================================================
@@ -921,10 +924,16 @@ GO
 CREATE VIEW vw_TimeToHire AS
 SELECT
     a.ApplicationID,
-    c.FullName,
-    DATEDIFF(DAY, a.AppliedDate, h.ChangedAt) AS DaysToHire
+    c.FullName AS CandidateName,
+    j.JobTitle,
+    a.AppliedDate,
+    h.ChangedAt AS HiredDate,
+    DATEDIFF(DAY, a.AppliedDate, h.ChangedAt) AS DaysToHire,
+    'Hired' AS ApplicationStatus,
+    'Direct' AS Source
 FROM Applications a
 JOIN Candidates c ON a.CandidateID = c.CandidateID
+JOIN JobPostings j ON a.JobID = j.JobID
 JOIN ApplicationStatusHistory h ON a.ApplicationID = h.ApplicationID
 WHERE h.ToStatusID = (SELECT StatusID FROM ApplicationStatus WHERE StatusName = 'Hired');
 GO
@@ -2432,11 +2441,13 @@ GO
 CREATE VIEW vw_GhostingRiskDashboard AS
 SELECT 
     a.ApplicationID,
+    a.CandidateID,
     c.FullName AS CandidateName,
     j.JobTitle,
     u.Username AS RecruiterName,
     ISNULL(gp_c.GhostingScore, 0) AS CandidateGhostingScore,
     ISNULL(gp_r.GhostingScore, 0) AS RecruiterGhostingScore,
+    (ISNULL(gp_c.GhostingScore, 0) + ISNULL(gp_r.GhostingScore, 0)) / 2.0 AS OverallRiskScore,
     ISNULL(cl.AvgResponseTime, 0) AS AvgResponseTime,
     ISNULL(cl.TotalCommunications, 0) AS TotalCommunications,
     CASE 
@@ -3838,6 +3849,7 @@ BEGIN
             c.FullName,
             c.YearsOfExperience,
             c.Location AS CandidateLocation,
+            HasApplied = CASE WHEN EXISTS (SELECT 1 FROM Applications WHERE JobID = @JobID AND CandidateID = c.CandidateID AND IsDeleted = 0) THEN 1 ELSE 0 END,
             
             TechnicalScore = CAST((
                 SELECT AVG(
@@ -3904,6 +3916,7 @@ BEGIN
         rc.FullName,
         rc.YearsOfExperience,
         rc.CandidateLocation,
+        rc.HasApplied,
         rc.TechnicalScore,
         rc.ExperienceScore,
         rc.BehavioralScore,

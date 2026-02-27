@@ -4,11 +4,13 @@ import JobCard from './JobCard';
 import { Loader2, Search, Filter, Briefcase } from 'lucide-react';
 import API_BASE from '../../apiConfig';
 
-const JobList = ({ refreshTrigger, onDeleteJob, onFindMatches, onOpenPipeline }) => {
+const JobList = ({ refreshTrigger, onDeleteJob, onFindMatches, onOpenPipeline, onUpdateJob }) => {
     const [jobs, setJobs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+
+    const [matches, setMatches] = useState({});
 
     useEffect(() => {
         fetchJobs();
@@ -18,8 +20,26 @@ const JobList = ({ refreshTrigger, onDeleteJob, onFindMatches, onOpenPipeline })
         setLoading(true);
         try {
             const res = await axios.get(`${API_BASE}/jobs`);
-            setJobs(res.data);
+            const jobsData = res.data;
+            setJobs(jobsData);
             setError('');
+
+            // Fetch matches for each job
+            const matchPromises = jobsData.map(async (job) => {
+                try {
+                    const matchRes = await axios.get(`${API_BASE}/jobs/${job.JobID}/matches`);
+                    return { id: job.JobID, data: matchRes.data };
+                } catch (err) {
+                    return { id: job.JobID, data: [] };
+                }
+            });
+
+            const matchResults = await Promise.all(matchPromises);
+            const matchesMap = {};
+            matchResults.forEach(res => {
+                matchesMap[res.id] = res.data;
+            });
+            setMatches(matchesMap);
         } catch (err) {
             console.error("Fetch Jobs Error:", err);
             setError('Failed to load job postings.');
@@ -92,6 +112,8 @@ const JobList = ({ refreshTrigger, onDeleteJob, onFindMatches, onOpenPipeline })
                             onDelete={onDeleteJob}
                             onFindMatches={() => onFindMatches(job)}
                             onOpenPipeline={() => onOpenPipeline(job)}
+                            onUpdateJob={onUpdateJob}
+                            matches={matches[job.JobID] || []}
                         />
                     ))}
                 </div>

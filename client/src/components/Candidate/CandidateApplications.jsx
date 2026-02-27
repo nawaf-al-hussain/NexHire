@@ -12,6 +12,7 @@ const getStatusColor = (status) => {
         case 'Withdrawn': return 'text-slate-400 bg-slate-400/10 border-slate-400/20';
         case 'Interview': return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
         case 'Screening': return 'text-indigo-400 bg-indigo-400/10 border-indigo-400/20';
+        case 'Invited': return 'text-amber-500 bg-amber-500/10 border-amber-500/20 animate-pulse';
         default: return 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20';
     }
 };
@@ -23,6 +24,16 @@ const stepActive = (stepName, currentStatus) => {
 
 const CandidateApplications = ({ applications, loading, onRefresh }) => {
     const [expandedApp, setExpandedApp] = useState(null);
+
+    const handleRespond = async (applicationID, action) => {
+        try {
+            await axios.post(`${API_BASE}/candidates/invitations/${applicationID}/respond`, { action });
+            alert(`You have ${action}ed the invitation.`);
+            if (onRefresh) onRefresh();
+        } catch (err) {
+            alert(err.response?.data?.error || "Failed to respond to invitation.");
+        }
+    };
 
     const handleWithdraw = async (applicationID) => {
         const reason = prompt("Please provide a reason for withdrawal:");
@@ -99,13 +110,30 @@ const CandidateApplications = ({ applications, loading, onRefresh }) => {
                                 <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ${getStatusColor(app.StatusName)}`}>
                                     {app.StatusName}
                                 </div>
-                                {canWithdraw && (
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleWithdraw(app.ApplicationID); }}
-                                        className="px-4 py-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
-                                    >
-                                        Withdraw
-                                    </button>
+                                {app.StatusName === 'Invited' ? (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleRespond(app.ApplicationID, 'accept'); }}
+                                            className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-black text-emerald-500 uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-emerald-500/10"
+                                        >
+                                            Accept
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleRespond(app.ApplicationID, 'decline'); }}
+                                            className="px-4 py-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
+                                        >
+                                            Decline
+                                        </button>
+                                    </div>
+                                ) : (
+                                    canWithdraw && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleWithdraw(app.ApplicationID); }}
+                                            className="px-4 py-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
+                                        >
+                                            Withdraw
+                                        </button>
+                                    )
                                 )}
                                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}>
                                     <ChevronRight size={16} />

@@ -94,6 +94,47 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 /**
+ * @route   PUT /api/jobs/:id
+ * @desc    Update a job posting
+ * @access  Private (Recruiter)
+ */
+router.put('/:id', protect, authorize(2), async (req, res) => {
+    const { title, description, location, minExperience, vacancies, isActive, skills } = req.body;
+    const jobId = req.params.id;
+
+    if (!title || !vacancies) {
+        return res.status(400).json({ error: "Title and vacancies are required." });
+    }
+
+    try {
+        // Update the job posting
+        await query(
+            "UPDATE JobPostings SET JobTitle = ?, Description = ?, Location = ?, MinExperience = ?, Vacancies = ?, IsActive = ? WHERE JobID = ?",
+            [title, description, location, minExperience || 0, vacancies, isActive ? 1 : 0, jobId]
+        );
+
+        // Update skills - delete existing and insert new ones
+        if (skills && Array.isArray(skills)) {
+            // Delete existing skills
+            await query("DELETE FROM JobSkills WHERE JobID = ?", [jobId]);
+
+            // Insert new skills
+            for (const skill of skills) {
+                await query(
+                    "INSERT INTO JobSkills (JobID, SkillID, IsMandatory, MinProficiency) VALUES (?, ?, ?, ?)",
+                    [jobId, skill.id, skill.isMandatory ? 1 : 0, skill.minProficiency || 1]
+                );
+            }
+        }
+
+        res.json({ message: "Job posting updated successfully.", jobID: jobId });
+    } catch (err) {
+        console.error("Update Job Error:", err.message);
+        res.status(500).json({ error: `Database Error: ${err.message}` });
+    }
+});
+
+/**
  * @route   DELETE /api/jobs/:id
  * @desc    Soft delete a job posting
  * @access  Private (Recruiter)
@@ -138,14 +179,31 @@ router.get('/:id/matches', protect, authorize(2), async (req, res) => {
 router.get('/:id/applications', protect, authorize(2), async (req, res) => {
     try {
         const applications = await query(
-            "SELECT a.*, c.FullName, c.Location as CandidateLocation, " +
-            "s.StatusName, v.TotalMatchScore as MatchScore " +
-            "FROM Applications a " +
-            "JOIN Candidates c ON a.CandidateID = c.CandidateID " +
-            "JOIN ApplicationStatus s ON a.StatusID = s.StatusID " +
-            "LEFT JOIN vw_CandidateMatchScore v ON a.ApplicationID = v.ApplicationID " +
-            "WHERE a.JobID = ? AND a.IsDeleted = 0 " +
-            "ORDER BY a.AppliedDate DESC",
+            `SELECT a.*, c.FullName, c.Location as CandidateLocation, 
+            s.StatusName, 
+            CAST(
+                ROUND(
+                    (ISNULL(
+                        (SELECT SUM(cs2.ProficiencyLevel) 
+                         FROM CandidateSkills cs2 
+                         JOIN JobSkills js2 ON cs2.SkillID = js2.SkillID 
+                         WHERE cs2.CandidateID = c.CandidateID AND js2.JobID = a.JobID
+                        ), 0
+                    ) + (c.YearsOfExperience * 2) + 
+                    CASE WHEN c.Location = j.Location THEN 10 ELSE 0 END
+                ) * 100.0 / NULLIF(
+                    (SELECT SUM(MinProficiency) FROM JobSkills WHERE JobID = a.JobID) + 20, 
+                    0
+                ),
+                0
+                ) AS INT
+            ) AS MatchScore
+            FROM Applications a
+            JOIN Candidates c ON a.CandidateID = c.CandidateID
+            JOIN ApplicationStatus s ON a.StatusID = s.StatusID
+            JOIN JobPostings j ON a.JobID = j.JobID
+            WHERE a.JobID = ? AND a.IsDeleted = 0
+            ORDER BY a.AppliedDate DESC`,
             [req.params.id]
         );
         res.json(applications);

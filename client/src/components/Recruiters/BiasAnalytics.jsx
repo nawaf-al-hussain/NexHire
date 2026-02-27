@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Users, MapPin, Briefcase, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Shield, Users, MapPin, Briefcase, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import API_BASE from '../../apiConfig';
 
@@ -43,7 +43,10 @@ const BiasAnalytics = () => {
 
     if (loading) {
         return (
-            <div className="glass-card h-96 rounded-[3rem] animate-pulse"></div>
+            <div className="flex items-center justify-center py-20">
+                <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
+                <span className="ml-3 text-sm font-black uppercase tracking-widest text-[var(--text-muted)]">Loading Bias Analytics...</span>
+            </div>
         );
     }
 

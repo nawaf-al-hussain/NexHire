@@ -9,7 +9,7 @@ const { protect, authorize } = require('../middleware/rbac');
  * @access  Private (Recruiter)
  */
 router.put('/:id/status', protect, authorize(2), async (req, res) => {
-    const { statusID, notes } = req.body;
+    const { statusID, notes, rejectionReason } = req.body;
     const recruiterUserID = req.user.UserID;
 
     if (!statusID) {
@@ -18,8 +18,8 @@ router.put('/:id/status', protect, authorize(2), async (req, res) => {
 
     try {
         await query(
-            "EXEC sp_UpdateApplicationStatus @ApplicationID = ?, @NewStatusID = ?, @ChangedBy = ?, @Notes = ?",
-            [req.params.id, statusID, recruiterUserID, notes || 'Status updated via recruiter panel']
+            "EXEC sp_UpdateApplicationStatus @ApplicationID = ?, @NewStatusID = ?, @ChangedBy = ?, @Notes = ?, @RejectionReason = ?",
+            [req.params.id, statusID, recruiterUserID, notes || 'Status updated via recruiter panel', rejectionReason || null]
         );
         res.json({ message: "Application status updated successfully." });
     } catch (err) {
@@ -78,6 +78,57 @@ router.get('/:id/history', protect, async (req, res) => {
     } catch (err) {
         console.error("Fetch History Error:", err.message);
         res.status(500).json({ error: "Failed to fetch application history." });
+    }
+});
+
+/**
+ * @route   POST /api/applications/auto-reject
+ * @desc    Run auto-reject batch process for unqualified candidates
+ * @access  Private (Recruiter)
+ */
+router.post('/auto-reject', protect, authorize(2), async (req, res) => {
+    try {
+        const result = await query("EXEC sp_AutoRejectUnqualified");
+        res.json({
+            success: true,
+            message: "Auto-reject batch completed.",
+            result: result
+        });
+    } catch (err) {
+        console.error("Auto-Reject Error:", err.message);
+        res.status(500).json({ error: "Failed to run auto-reject process." });
+    }
+});
+
+/**
+ * @route   GET /api/applications/auto-rejected
+ * @desc    Get list of auto-rejected applications
+ * @access  Private (Recruiter)
+ */
+router.get('/auto-rejected', protect, authorize(2), async (req, res) => {
+    try {
+        const data = await query(`
+            SELECT 
+                a.ApplicationID,
+                a.AppliedDate,
+                a.RejectionReason,
+                c.FullName AS CandidateName,
+                c.YearsOfExperience AS CandidateExperience,
+                j.JobTitle,
+                j.MinExperience AS RequiredExperience
+            FROM Applications a
+            JOIN Candidates c ON a.CandidateID = c.CandidateID
+            JOIN JobPostings j ON a.JobID = j.JobID
+            JOIN ApplicationStatus s ON a.StatusID = s.StatusID
+            WHERE s.StatusName = 'Rejected' 
+            AND a.RejectionReason LIKE '%Auto-Rejected%'
+            AND a.IsDeleted = 0
+            ORDER BY a.AppliedDate DESC
+        `);
+        res.json(data);
+    } catch (err) {
+        console.error("Auto-Rejected List Error:", err.message);
+        res.status(500).json({ error: "Failed to fetch auto-rejected applications." });
     }
 });
 

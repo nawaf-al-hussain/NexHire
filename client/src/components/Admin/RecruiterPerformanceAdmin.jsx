@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Calendar, CheckCircle, TrendingUp, Award } from 'lucide-react';
+import { Users, Calendar, CheckCircle, TrendingUp, Award, User, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import API_BASE from '../../apiConfig';
 
@@ -36,7 +36,10 @@ const RecruiterPerformanceAdmin = () => {
 
     if (loading) {
         return (
-            <div className="glass-card h-96 rounded-[3rem] animate-pulse"></div>
+            <div className="flex items-center justify-center py-20">
+                <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
+                <span className="ml-3 text-sm font-black uppercase tracking-widest text-[var(--text-muted)]">Loading Performance Data...</span>
+            </div>
         );
     }
 
@@ -112,8 +115,8 @@ const RecruiterPerformanceAdmin = () => {
                                 <tr key={i} className="group hover:bg-[var(--bg-accent)] transition-colors">
                                     <td className="py-4 pr-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500 font-black text-xs">
-                                                {(recruiter.RecruiterName || 'U').charAt(0)}
+                                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                                <User size={14} />
                                             </div>
                                             <span className="text-sm font-black">{recruiter.RecruiterName || 'Unknown'}</span>
                                         </div>

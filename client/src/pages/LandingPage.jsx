@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Briefcase, ShieldCheck, Users, Zap, Globe, Cpu } from 'lucide-react';
+import NexHireLogo from '../assets/nexhire_logo.svg';
 
 const LandingPage = () => {
     return (
@@ -14,8 +15,8 @@ const LandingPage = () => {
             {/* Navigation */}
             <nav className="glass-nav mx-auto max-w-7xl mt-4 rounded-2xl px-6 py-4 flex items-center justify-between border border-[var(--border-primary)]">
                 <div className="flex items-center gap-3 group pointer-events-auto">
-                    <div className="bg-gradient-to-br from-indigo-600 to-blue-500 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20 group-hover:rotate-12 transition-transform">
-                        <Briefcase className="text-white w-6 h-6" />
+                    <div className="w-10 h-10 rounded-2xl overflow-hidden bg-indigo-600 shadow-lg shadow-indigo-600/20">
+                        <img src={NexHireLogo} alt="NexHire Logo" className="w-full h-full object-contain" />
                     </div>
                     <span className="text-2xl font-black tracking-tight uppercase">NexHire</span>
                 </div>
@@ -136,8 +137,8 @@ const LandingPage = () => {
             <footer className="border-t border-[var(--border-primary)] py-12 px-6 bg-[var(--bg-accent)]/30">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
                     <div className="flex items-center gap-3">
-                        <div className="p-1.5 bg-indigo-500/10 rounded-lg">
-                            <Briefcase className="w-5 h-5 text-indigo-500" />
+                        <div className="w-8 h-8 rounded-xl overflow-hidden bg-indigo-600 shadow-lg shadow-indigo-600/20">
+                            <img src={NexHireLogo} alt="NexHire Logo" className="w-full h-full object-contain" />
                         </div>
                         <span className="text-lg font-bold uppercase tracking-tighter">NexHire Showcase</span>
                     </div>

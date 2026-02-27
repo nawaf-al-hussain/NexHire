@@ -1,21 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, Video, FileText, ExternalLink, Sparkles, Loader2, Play } from 'lucide-react';
 import axios from 'axios';
 import API_BASE from '../../apiConfig';
 
-const LearningPaths = ({ learningPath, loading, onGenerate, onRefresh }) => {
+const LearningPaths = ({ learningPath, loading, onGenerate, onRefresh, initialTargetRole }) => {
     const [generating, setGenerating] = useState(false);
-    const [selectedTargetRole, setSelectedTargetRole] = useState('');
+    const [selectedJobID, setSelectedJobID] = useState('');
+    const [jobs, setJobs] = useState([]);
+    const [loadingJobs, setLoadingJobs] = useState(true);
     const [showDemo, setShowDemo] = useState(false);
+    const [generatedPath, setGeneratedPath] = useState(null);
 
-    const targetRoles = [
-        'Senior Developer',
-        'Tech Lead',
-        'Software Architect',
-        'DevOps Engineer',
-        'Full Stack Developer',
-        'Data Engineer'
-    ];
+    // Fetch available jobs for the dropdown
+    useEffect(() => {
+        const fetchJobs = async () => {
+            try {
+                const res = await axios.get(`${API_BASE}/candidates/discover`);
+                // Filter to active jobs only
+                const activeJobs = (res.data || []).filter(job => job.IsActive !== false);
+                setJobs(activeJobs);
+            } catch (err) {
+                console.error('Fetch Jobs Error:', err);
+                // Fallback to empty array
+                setJobs([]);
+            } finally {
+                setLoadingJobs(false);
+            }
+        };
+        fetchJobs();
+    }, []);
 
     // Demo learning paths to show when no real data exists
     const demoLearningPaths = [
@@ -26,19 +39,33 @@ const LearningPaths = ({ learningPath, loading, onGenerate, onRefresh }) => {
         { SkillName: 'AWS Cloud Services', Priority: 5, EstimatedHours: 20 }
     ];
 
-    // Use demo data when showDemo is true
-    const displayPaths = showDemo ? demoLearningPaths : (learningPath || []);
+    // Use demo data when showDemo is true, otherwise use real learning path or generated path
+    const displayPaths = showDemo ? demoLearningPaths : (generatedPath || learningPath || []);
 
     const handleGenerate = async () => {
-        if (!selectedTargetRole) {
-            alert('Please select a target role first.');
+        if (!selectedJobID) {
+            alert('Please select a target job first.');
             return;
         }
         setGenerating(true);
         try {
-            await axios.post(`${API_BASE}/candidates/learning-path`, { targetRole: selectedTargetRole });
-            onRefresh();
-            alert('Learning path generated successfully!');
+            // Send targetJobID directly to backend
+            await axios.post(`${API_BASE}/candidates/learning-path`, { targetJobID: selectedJobID });
+
+            // Fetch the newly generated learning path
+            const res = await axios.get(`${API_BASE}/candidates/learning-path`);
+
+            // If we got data back, use it; otherwise show demo
+            if (res.data && res.data.length > 0) {
+                // Set the generated path locally so it displays immediately
+                setGeneratedPath(res.data);
+                onRefresh();
+                alert('Learning path generated successfully!');
+            } else {
+                // No data returned, show demo
+                setShowDemo(true);
+                alert('Demo learning path loaded! (Database connection needed for full feature)');
+            }
         } catch (err) {
             console.error('Generate Learning Path Error:', err);
             // Show demo data on failure
@@ -49,7 +76,7 @@ const LearningPaths = ({ learningPath, loading, onGenerate, onRefresh }) => {
         }
     };
 
-    if (loading || generating) {
+    if (loading || generating || loadingJobs) {
         return (
             <div className="flex flex-col items-center justify-center py-20">
                 <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
@@ -78,13 +105,15 @@ const LearningPaths = ({ learningPath, loading, onGenerate, onRefresh }) => {
 
                 <div className="flex flex-col md:flex-row gap-4">
                     <select
-                        value={selectedTargetRole}
-                        onChange={(e) => setSelectedTargetRole(e.target.value)}
+                        value={selectedJobID}
+                        onChange={(e) => setSelectedJobID(e.target.value)}
                         className="flex-1 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-indigo-500"
                     >
-                        <option value="">Select your target role...</option>
-                        {targetRoles.map((role) => (
-                            <option key={role} value={role}>{role}</option>
+                        <option value="">Select your target job...</option>
+                        {jobs.map((job) => (
+                            <option key={job.JobID} value={job.JobID}>
+                                {job.JobTitle} - {job.Location} ({job.Vacancies} openings)
+                            </option>
                         ))}
                     </select>
 
@@ -100,19 +129,19 @@ const LearningPaths = ({ learningPath, loading, onGenerate, onRefresh }) => {
             </div>
 
             {/* Existing Learning Paths */}
-            {!learningPath || learningPath.length === 0 ? (
+            {displayPaths.length === 0 ? (
                 <div className="p-12 border-2 border-dashed border-[var(--border-primary)] rounded-[3rem] text-center bg-[var(--bg-accent)]/5">
                     <BookOpen className="w-16 h-16 text-[var(--text-muted)] mx-auto mb-6 opacity-20" />
                     <p className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest italic opacity-40 mb-4">
                         No learning paths generated yet.
                     </p>
                     <p className="text-[10px] text-[var(--text-muted)] opacity-60">
-                        Select a target role above to get personalized learning recommendations.
+                        Select a target job above to get personalized learning recommendations.
                     </p>
                 </div>
             ) : (
                 <div className="space-y-6">
-                    {learningPath.map((path, index) => (
+                    {displayPaths.map((path, index) => (
                         <div
                             key={index}
                             className="glass-card p-8 rounded-[2.5rem] hover:border-indigo-500/30 transition-all"

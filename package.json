@@ -10,5 +10,8 @@
     },
     "devDependencies": {
         "concurrently": "^8.2.0"
+    },
+    "dependencies": {
+        "figma-developer-mcp": "^0.6.4"
     }
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Target, Star, BrainCircuit, ShieldCheck, ChevronRight, X, Loader2, Target as TargetIcon, Sparkles, Info, User, MapPin, Briefcase, Award } from 'lucide-react';
+import { Target, Star, BrainCircuit, ShieldCheck, ChevronRight, X, Loader2, Target as TargetIcon, Sparkles, Info, User, MapPin, Briefcase, Award, CheckCircle2 } from 'lucide-react';
 import API_BASE from '../../apiConfig';
 import SkillMatrix from './SkillMatrix';
 
@@ -9,6 +9,7 @@ const CandidateMatches = ({ job, isOpen, onClose }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [requiredSkills, setRequiredSkills] = useState([]);
+    const [showOnlyApplicants, setShowOnlyApplicants] = useState(false);
 
     useEffect(() => {
         if (isOpen && job) {
@@ -36,6 +37,27 @@ const CandidateMatches = ({ job, isOpen, onClose }) => {
         }
     };
 
+    const handleInitiatePipeline = async (candidateID) => {
+        try {
+            await axios.post(`${API_BASE}/recruiters/initiate-pipeline`, {
+                jobID: job.JobID,
+                candidateID
+            });
+
+            // Optimistic update of the local matches state
+            setMatches(prev => prev.map(m =>
+                m.CandidateID === candidateID ? { ...m, HasApplied: 1, isInvited: true } : m
+            ));
+        } catch (err) {
+            console.error("Initiate Pipeline Error:", err);
+            alert(err.response?.data?.error || "Failed to initiate pipeline.");
+        }
+    };
+
+    const filteredMatches = showOnlyApplicants
+        ? matches.filter(m => m.HasApplied)
+        : matches;
+
     if (!isOpen) return null;
 
     return (
@@ -55,9 +77,22 @@ const CandidateMatches = ({ job, isOpen, onClose }) => {
                             <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-1">Ranking candidates for: <span className="text-indigo-500">{job?.JobTitle}</span></p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="w-10 h-10 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-primary)] flex items-center justify-center text-[var(--text-muted)] hover:text-indigo-500 transition-colors">
-                        <X size={20} />
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl mr-2">
+                            <label className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)] flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={showOnlyApplicants}
+                                    onChange={() => setShowOnlyApplicants(!showOnlyApplicants)}
+                                    className="w-3 h-3 rounded bg-indigo-500/20 border-indigo-500/30"
+                                />
+                                Only Applicants
+                            </label>
+                        </div>
+                        <button onClick={onClose} className="w-10 h-10 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-primary)] flex items-center justify-center text-[var(--text-muted)] hover:text-indigo-500 transition-colors">
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Content */}
@@ -74,15 +109,17 @@ const CandidateMatches = ({ job, isOpen, onClose }) => {
                         <div className="p-10 rounded-[2.5rem] bg-rose-500/5 border border-rose-500/10 text-center">
                             <p className="text-rose-500 font-black text-xs uppercase tracking-widest">{error}</p>
                         </div>
-                    ) : matches.length === 0 ? (
+                    ) : filteredMatches.length === 0 ? (
                         <div className="text-center py-20">
                             <Info className="mx-auto text-[var(--text-muted)] mb-6 opacity-30" size={48} />
-                            <h4 className="text-lg font-black text-[var(--text-muted)] uppercase tracking-tighter">No Compatible Matches</h4>
+                            <h4 className="text-lg font-black text-[var(--text-muted)] uppercase tracking-tighter">
+                                {showOnlyApplicants ? "No Matching Applicants" : "No Compatible Matches"}
+                            </h4>
                             <p className="text-xs text-[var(--text-muted)] font-bold mt-2 uppercase tracking-widest italic opacity-50">Try adjusting mandatory skill requirements</p>
                         </div>
                     ) : (
                         <div className="space-y-6">
-                            {matches.map((candidate, idx) => (
+                            {filteredMatches.sort((a, b) => b.TotalMatchScore - a.TotalMatchScore).map((candidate, idx) => (
                                 <div key={candidate.CandidateID} className="glass-card p-8 rounded-[2.5rem] hover:bg-indigo-500/[0.02] transition-all group relative overflow-hidden">
                                     {/* Rank Badge */}
                                     <div className="absolute top-0 right-0 p-6 flex flex-col items-end">
@@ -98,7 +135,14 @@ const CandidateMatches = ({ job, isOpen, onClose }) => {
 
                                         <div className="space-y-4">
                                             <div>
-                                                <h4 className="text-xl font-black group-hover:text-indigo-500 transition-colors">{candidate.FullName}</h4>
+                                                <div className="flex items-center gap-3">
+                                                    <h4 className="text-xl font-black group-hover:text-indigo-500 transition-colors">{candidate.FullName}</h4>
+                                                    {candidate.HasApplied && (
+                                                        <span className="flex items-center gap-1 bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-emerald-500/20">
+                                                            <CheckCircle2 size={10} /> Applied
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="flex gap-4 mt-2">
                                                     <div className="flex items-center gap-2 text-[var(--text-muted)] opacity-60">
                                                         <MapPin size={12} className="text-indigo-500/50" />
@@ -148,8 +192,19 @@ const CandidateMatches = ({ job, isOpen, onClose }) => {
                                             <Award size={16} className="text-amber-500" />
                                             <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest italic">{candidate.RecommendedAction}</p>
                                         </div>
-                                        <button className="flex items-center gap-2 text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:translate-x-1 transition-all group/btn">
-                                            Initiate Pipeline <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                                        <button
+                                            onClick={() => handleInitiatePipeline(candidate.CandidateID)}
+                                            disabled={candidate.HasApplied || candidate.isInvited}
+                                            className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all group/btn ${candidate.HasApplied || candidate.isInvited
+                                                    ? 'text-emerald-500 cursor-default opacity-80'
+                                                    : 'text-indigo-500 hover:translate-x-1 cursor-pointer'
+                                                }`}
+                                        >
+                                            {candidate.HasApplied || candidate.isInvited ? (
+                                                <>Invitation Sent <CheckCircle2 size={14} /></>
+                                            ) : (
+                                                <>Initiate Pipeline <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" /></>
+                                            )}
                                         </button>
                                     </div>
                                 </div>

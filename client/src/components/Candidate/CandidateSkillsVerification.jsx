@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Star, ShieldCheck, Zap, Award, Target, ChevronRight, Lock, Code2, Cpu, Plus } from 'lucide-react';
 import AssessmentTestingEngine from './AssessmentTestingEngine';
 
-const CandidateSkillsVerification = ({ assessments, profileSkills = [], loading, onRefresh }) => {
+const CandidateSkillsVerification = ({ assessments, profileSkills = [], loading, onRefresh, onAddSkill }) => {
     const [selectedAssessment, setSelectedAssessment] = useState(null);
     if (loading) {
         return (
@@ -26,12 +26,28 @@ const CandidateSkillsVerification = ({ assessments, profileSkills = [], loading,
                             <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-500 text-[10px] font-black uppercase tracking-widest">{profileSkills.length} Skills</span>
                         )}
                     </div>
+                    {onAddSkill && (
+                        <button
+                            onClick={onAddSkill}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 transition-all"
+                        >
+                            <Plus size={14} /> Add Skill
+                        </button>
+                    )}
                 </div>
 
                 {profileSkills.length === 0 ? (
                     <div className="p-10 border-2 border-dashed border-[var(--border-primary)] rounded-[2rem] text-center">
                         <Code2 className="w-10 h-10 text-indigo-500/20 mx-auto mb-3" />
-                        <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest opacity-40">No skills on file yet. Use the Add Skill button in the sidebar to build your profile.</p>
+                        <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest opacity-40 mb-4">No skills on file yet. Click the Add Skill button above to build your profile.</p>
+                        {onAddSkill && (
+                            <button
+                                onClick={onAddSkill}
+                                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 transition-all inline-flex items-center gap-2"
+                            >
+                                <Plus size={14} /> Add Your First Skill
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

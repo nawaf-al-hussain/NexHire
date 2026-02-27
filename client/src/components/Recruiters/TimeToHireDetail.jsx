@@ -1,15 +1,17 @@
 import React from 'react';
-import { Clock, Users, Calendar, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { Clock, Users, Calendar, TrendingUp, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import API_BASE from '../../apiConfig';
 
 const TimeToHireDetail = () => {
     const [timeData, setTimeData] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
 
     React.useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
+            setError(null);
             try {
                 const res = await axios.get(`${API_BASE}/analytics/time-to-hire-detail`);
                 if (res.data && Array.isArray(res.data)) {
@@ -17,6 +19,7 @@ const TimeToHireDetail = () => {
                 }
             } catch (err) {
                 console.error("Time to Hire Detail Fetch Error:", err);
+                setError(err.response?.data?.error || "Failed to load time-to-hire data");
             } finally {
                 setLoading(false);
             }
@@ -36,25 +39,33 @@ const TimeToHireDetail = () => {
         return 'bg-rose-500/10 border-rose-500/20';
     };
 
-    const sampleData = [
-        { CandidateName: 'John Smith', JobTitle: 'Senior Developer', AppliedDate: '2026-01-10', HiredDate: '2026-02-05', DaysToHire: 26, ApplicationStatus: 'Hired', Source: 'LinkedIn' },
-        { CandidateName: 'Sarah Johnson', JobTitle: 'UX Designer', AppliedDate: '2026-01-15', HiredDate: '2026-01-28', DaysToHire: 13, ApplicationStatus: 'Hired', Source: 'Referral' },
-        { CandidateName: 'Mike Brown', JobTitle: 'Data Analyst', AppliedDate: '2026-01-20', HiredDate: '2026-02-18', DaysToHire: 29, ApplicationStatus: 'Hired', Source: 'Job Board' },
-        { CandidateName: 'Emily Davis', JobTitle: 'Product Manager', AppliedDate: '2026-02-01', HiredDate: '2026-02-20', DaysToHire: 19, ApplicationStatus: 'Hired', Source: 'Direct' },
-        { CandidateName: 'Alex Wilson', JobTitle: 'DevOps Engineer', AppliedDate: '2026-01-05', HiredDate: '2026-02-15', DaysToHire: 41, ApplicationStatus: 'Hired', Source: 'LinkedIn' },
-        { CandidateName: 'Jessica Lee', JobTitle: 'Frontend Developer', AppliedDate: '2026-02-10', HiredDate: null, DaysToHire: null, ApplicationStatus: 'In Process', Source: 'Referral' }
-    ];
-
-    const displayData = timeData.length > 0 ? timeData : sampleData;
-
-    const hired = displayData.filter(d => d.ApplicationStatus === 'Hired');
+    const hired = timeData.filter(d => d.ApplicationStatus === 'Hired');
     const avgDays = hired.length > 0 ? Math.round(hired.reduce((sum, d) => sum + (d.DaysToHire || 0), 0) / hired.length) : 0;
     const fastHires = hired.filter(d => d.DaysToHire <= 14).length;
     const slowHires = hired.filter(d => d.DaysToHire > 30).length;
 
     if (loading) {
         return (
-            <div className="glass-card h-96 rounded-[3rem] animate-pulse"></div>
+            <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+                <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Loading Time-to-Hire Data...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="glass-card p-8 rounded-[2.5rem] text-center">
+                <AlertTriangle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
+                <h3 className="text-sm font-black uppercase tracking-widest mb-2">Error Loading Data</h3>
+                <p className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest mb-4">{error}</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-500 transition-all"
+                >
+                    Try Again
+                </button>
+            </div>
         );
     }
 
@@ -123,46 +134,56 @@ const TimeToHireDetail = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border-primary)]">
-                            {displayData.slice(0, 15).map((item, i) => (
-                                <tr key={i} className="group hover:bg-[var(--bg-accent)] transition-colors">
-                                    <td className="py-4 pr-4">
-                                        <span className="text-sm font-black">{item.CandidateName || 'Unknown'}</span>
-                                    </td>
-                                    <td className="py-4 pr-4">
-                                        <span className="text-xs font-bold text-[var(--text-secondary)]">{item.JobTitle || 'N/A'}</span>
-                                    </td>
-                                    <td className="py-4 pr-4">
-                                        <span className="text-xs font-bold text-[var(--text-muted)]">
-                                            {item.AppliedDate ? new Date(item.AppliedDate).toLocaleDateString() : '-'}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 pr-4">
-                                        <span className="text-xs font-bold text-[var(--text-muted)]">
-                                            {item.HiredDate ? new Date(item.HiredDate).toLocaleDateString() : '-'}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 pr-4">
-                                        {item.DaysToHire ? (
-                                            <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-black ${getDurationBg(item.DaysToHire)}`}>
-                                                {item.DaysToHire} days
-                                            </span>
-                                        ) : (
-                                            <span className="text-xs font-bold text-[var(--text-muted)]">-</span>
-                                        )}
-                                    </td>
-                                    <td className="py-4 pr-4">
-                                        <span className="text-xs font-bold text-[var(--text-secondary)]">{item.Source || 'N/A'}</span>
-                                    </td>
-                                    <td className="py-4">
-                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${item.ApplicationStatus === 'Hired'
-                                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                                                : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
-                                            }`}>
-                                            {item.ApplicationStatus || 'Unknown'}
-                                        </span>
+                            {timeData.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="py-12 text-center">
+                                        <Clock className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4 opacity-50" />
+                                        <p className="text-[var(--text-muted)]">No hiring data available yet.</p>
+                                        <p className="text-xs text-[var(--text-muted)] mt-1">Hired candidates will appear here with their time-to-hire metrics.</p>
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                timeData.slice(0, 15).map((item, i) => (
+                                    <tr key={i} className="group hover:bg-[var(--bg-accent)] transition-colors">
+                                        <td className="py-4 pr-4">
+                                            <span className="text-sm font-black">{item.CandidateName || 'Unknown'}</span>
+                                        </td>
+                                        <td className="py-4 pr-4">
+                                            <span className="text-xs font-bold text-[var(--text-secondary)]">{item.JobTitle || 'N/A'}</span>
+                                        </td>
+                                        <td className="py-4 pr-4">
+                                            <span className="text-xs font-bold text-[var(--text-muted)]">
+                                                {item.AppliedDate ? new Date(item.AppliedDate).toLocaleDateString() : '-'}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 pr-4">
+                                            <span className="text-xs font-bold text-[var(--text-muted)]">
+                                                {item.HiredDate ? new Date(item.HiredDate).toLocaleDateString() : '-'}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 pr-4">
+                                            {item.DaysToHire ? (
+                                                <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-black ${getDurationBg(item.DaysToHire)}`}>
+                                                    {item.DaysToHire} days
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs font-bold text-[var(--text-muted)]">-</span>
+                                            )}
+                                        </td>
+                                        <td className="py-4 pr-4">
+                                            <span className="text-xs font-bold text-[var(--text-secondary)]">{item.Source || 'N/A'}</span>
+                                        </td>
+                                        <td className="py-4">
+                                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${item.ApplicationStatus === 'Hired'
+                                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                                : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+                                                }`}>
+                                                {item.ApplicationStatus || 'Unknown'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>

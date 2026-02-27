@@ -1,11 +1,10 @@
 import React from 'react';
-import { Briefcase, Users, PlusCircle, Target, Sparkles, TrendingUp, Clock, AlertCircle, Calendar, CheckCircle2, RefreshCw, BarChart3, Shield, AlertTriangle, CheckCircle, Timer, Video } from 'lucide-react';
+import { Briefcase, Users, PlusCircle, Target, Sparkles, TrendingUp, Clock, AlertCircle, Calendar, CheckCircle2, RefreshCw, BarChart3, Shield, AlertTriangle, CheckCircle, Timer, Video, Link2, Activity, Bot, Bell, Network, MessageSquare, FileCheck, Brain, UserCheck, Lightbulb, ShieldAlert } from 'lucide-react';
 import DashboardShell from '../components/DashboardShell';
 import JobList from '../components/Jobs/JobList';
 import JobModal from '../components/Jobs/JobModal';
 import CandidateMatches from '../components/Jobs/CandidateMatches';
 import ApplicationPipeline from '../components/Jobs/ApplicationPipeline';
-import JobMatchingView from '../components/Jobs/JobMatchingView';
 import TalentPool from '../components/Recruiters/TalentPool';
 import HireAnalytics from '../components/Recruiters/HireAnalytics';
 import AdvancedAnalytics from '../components/Recruiters/AdvancedAnalytics';
@@ -14,6 +13,18 @@ import GhostingRiskDetail from '../components/Recruiters/GhostingRiskDetail';
 import SkillVerificationStatus from '../components/Recruiters/SkillVerificationStatus';
 import TimeToHireDetail from '../components/Recruiters/TimeToHireDetail';
 import VideoInterviews from '../components/Recruiters/VideoInterviews';
+import CandidateEngagement from '../components/Recruiters/CandidateEngagement';
+import ExternalPlatformSync from '../components/Recruiters/ExternalPlatformSync';
+import ScreeningBot from '../components/Recruiters/ScreeningBot';
+import MarketAlerts from '../components/Recruiters/MarketAlerts';
+import ReferralIntelligence from '../components/Recruiters/ReferralIntelligence';
+import InterviewQuestionsGenerator from '../components/Recruiters/InterviewQuestionsGenerator';
+import BackgroundChecks from '../components/Recruiters/BackgroundChecks';
+import BlockchainVerifications from '../components/Recruiters/BlockchainVerifications';
+import HireSuccessPredictor from '../components/Recruiters/HireSuccessPredictor';
+import OnboardingSuccessPredictor from '../components/Recruiters/OnboardingSuccessPredictor';
+import InterviewFatigueReducer from '../components/Recruiters/InterviewFatigueReducer';
+import AutoRejectionLog from '../components/Recruiters/AutoRejectionLog';
 import API_BASE from '../apiConfig';
 import axios from 'axios';
 
@@ -78,7 +89,6 @@ const RecruiterDashboard = () => {
     const recruiterNav = [
         { icon: Briefcase, label: 'Job Roles', active: activeTab === 'Job Roles', onClick: () => setActiveTab('Job Roles') },
         { icon: Users, label: 'Talent Pool', active: activeTab === 'Talent Pool', onClick: () => setActiveTab('Talent Pool') },
-        { icon: Target, label: 'Job Matching', active: activeTab === 'Job Matching', onClick: () => setActiveTab('Job Matching') },
         { icon: Clock, label: 'Interview Sch', active: activeTab === 'Interview Sch', onClick: () => setActiveTab('Interview Sch') },
         { icon: Video, label: 'Video Interviews', active: activeTab === 'Video Interviews', onClick: () => setActiveTab('Video Interviews') },
         { icon: TrendingUp, label: 'Hire Analytics', active: activeTab === 'Hire Analytics', onClick: () => setActiveTab('Hire Analytics') },
@@ -86,7 +96,18 @@ const RecruiterDashboard = () => {
         { icon: Shield, label: 'Bias Detection', active: activeTab === 'Bias Detection', onClick: () => setActiveTab('Bias Detection') },
         { icon: AlertTriangle, label: 'Ghosting Risk', active: activeTab === 'Ghosting Risk', onClick: () => setActiveTab('Ghosting Risk') },
         { icon: CheckCircle, label: 'Skill Verify', active: activeTab === 'Skill Verify', onClick: () => setActiveTab('Skill Verify') },
+        { icon: FileCheck, label: 'Background Checks', active: activeTab === 'Background Checks', onClick: () => setActiveTab('Background Checks') },
         { icon: Timer, label: 'Time to Hire', active: activeTab === 'Time to Hire', onClick: () => setActiveTab('Time to Hire') },
+        { icon: Activity, label: 'Engagement', active: activeTab === 'Engagement', onClick: () => setActiveTab('Engagement') },
+        { icon: Link2, label: 'Platform Sync', active: activeTab === 'Platform Sync', onClick: () => setActiveTab('Platform Sync') },
+        { icon: Bell, label: 'Market Alerts', active: activeTab === 'Market Alerts', onClick: () => setActiveTab('Market Alerts') },
+        { icon: Network, label: 'Referral Intel', active: activeTab === 'Referral Intel', onClick: () => setActiveTab('Referral Intel') },
+        { icon: MessageSquare, label: 'AI Questions', active: activeTab === 'AI Questions', onClick: () => setActiveTab('AI Questions') },
+        { icon: Brain, label: 'Hire Predictor', active: activeTab === 'Hire Predictor', onClick: () => setActiveTab('Hire Predictor') },
+        { icon: UserCheck, label: 'Onboarding', active: activeTab === 'Onboarding', onClick: () => setActiveTab('Onboarding') },
+        { icon: Shield, label: 'Blockchain Verif', active: activeTab === 'Blockchain Verif', onClick: () => setActiveTab('Blockchain Verif') },
+        { icon: Lightbulb, label: 'Interview Fatigue', active: activeTab === 'Interview Fatigue', onClick: () => setActiveTab('Interview Fatigue') },
+        { icon: ShieldAlert, label: 'Auto Rejection', active: activeTab === 'Auto Rejection', onClick: () => setActiveTab('Auto Rejection') },
     ];
 
     const renderMainContent = () => {
@@ -113,6 +134,9 @@ const RecruiterDashboard = () => {
                                             alert("Failed to archive job.");
                                         }
                                     }
+                                }}
+                                onUpdateJob={() => {
+                                    setRefreshJobs(prev => prev + 1);
                                 }}
                             />
                         </div>
@@ -184,8 +208,7 @@ const RecruiterDashboard = () => {
                         </div>
                     </div>
                 );
-            case 'Job Matching':
-                return <JobMatchingView />;
+
             case 'Talent Pool':
                 return <TalentPool />;
             case 'Hire Analytics':
@@ -198,6 +221,8 @@ const RecruiterDashboard = () => {
                 return <GhostingRiskDetail />;
             case 'Skill Verify':
                 return <SkillVerificationStatus />;
+            case 'Background Checks':
+                return <BackgroundChecks />;
             case 'Time to Hire':
                 return <TimeToHireDetail />;
             case 'Interview Sch': {
@@ -269,44 +294,80 @@ const RecruiterDashboard = () => {
             }
             case 'Video Interviews':
                 return <VideoInterviews />;
+            case 'Engagement':
+                return <CandidateEngagement />;
+            case 'Platform Sync':
+                return <ExternalPlatformSync />;
+            case 'Screening Bot':
+                return <ScreeningBot onGoBack={() => setActiveTab('Job Roles')} />;
+            case 'Market Alerts':
+                return <MarketAlerts />;
+            case 'Referral Intel':
+                return <ReferralIntelligence />;
+            case 'AI Questions':
+                return <InterviewQuestionsGenerator />;
+            case 'Hire Predictor':
+                return <HireSuccessPredictor />;
+            case 'Onboarding':
+                return <OnboardingSuccessPredictor />;
+            case 'Blockchain Verif':
+                return <BlockchainVerifications />;
+            case 'Interview Fatigue':
+                return <InterviewFatigueReducer />;
+            case 'Auto Rejection':
+                return <AutoRejectionLog />;
             default:
                 return null;
         }
     };
+
+    // Show header only for Job Roles and Screening Bot tabs
+    const showHeader = activeTab === 'Job Roles' || activeTab === 'Screening Bot';
 
     return (
         <DashboardShell
             title="Recruitment Pipeline"
             subtitle={activeTab}
             navigation={recruiterNav}
+            onProfileClick={() => { }}
         >
-            {/* Hero Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                {[
-                    { label: 'Total Pool', value: stats.totalPool, icon: Users, color: 'bg-indigo-600' },
-                    { label: 'Top Matches', value: stats.topMatches, icon: Target, color: 'bg-emerald-500' },
-                    { label: 'Open Roles', value: stats.openRoles, icon: PlusCircle, color: 'bg-slate-800' },
-                ].map((stat, i) => (
-                    <div key={i} className="glass-card p-8 rounded-[2rem] flex items-center gap-6">
-                        <div className={`w-16 h-16 rounded-[1.5rem] ${stat.color} flex items-center justify-center shadow-lg`}>
-                            <stat.icon size={28} className="text-white" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-black text-[var(--text-secondary)] uppercase tracking-widest mb-1">{stat.label}</p>
-                            <h4 className="text-3xl font-black">{stat.value}</h4>
-                        </div>
+            {showHeader && (
+                <>
+                    {/* Hero Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                        {[
+                            { label: 'Total Pool', value: stats.totalPool, icon: Users, color: 'bg-indigo-600' },
+                            { label: 'Top Matches', value: stats.topMatches, icon: Target, color: 'bg-emerald-500' },
+                            { label: 'Open Roles', value: stats.openRoles, icon: PlusCircle, color: 'bg-slate-800' },
+                        ].map((stat, i) => (
+                            <div key={i} className="glass-card p-8 rounded-[2rem] flex items-center gap-6">
+                                <div className={`w-16 h-16 rounded-[1.5rem] ${stat.color} flex items-center justify-center shadow-lg`}>
+                                    <stat.icon size={28} className="text-white" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-black text-[var(--text-secondary)] uppercase tracking-widest mb-1">{stat.label}</p>
+                                    <h4 className="text-3xl font-black">{stat.value}</h4>
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
 
-            <div className="flex justify-end mb-10">
-                <button
-                    onClick={() => setIsJobModalOpen(true)}
-                    className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20"
-                >
-                    <PlusCircle size={18} /> Post Job Role
-                </button>
-            </div>
+                    <div className="flex justify-end mb-10 gap-4">
+                        <button
+                            onClick={() => setActiveTab('Screening Bot')}
+                            className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20"
+                        >
+                            <Bot size={18} /> Screening Bot
+                        </button>
+                        <button
+                            onClick={() => setIsJobModalOpen(true)}
+                            className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20"
+                        >
+                            <PlusCircle size={18} /> Post Job Role
+                        </button>
+                    </div>
+                </>
+            )}
 
             {renderMainContent()}
 

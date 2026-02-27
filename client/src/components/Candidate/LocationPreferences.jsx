@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Home, Building2, Globe, Plane, Save, Check } from 'lucide-react';
+import { MapPin, Home, Building2, Globe, Plane, Save, Check, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import API_BASE from '../../apiConfig';
 
@@ -9,7 +9,7 @@ const LocationPreferences = () => {
         locations: [],
         openToRelocate: false,
         maxCommute: 60,
-        timezone: 'UTC'
+        locationPriority: 5
     });
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
@@ -23,12 +23,19 @@ const LocationPreferences = () => {
                 const res = await axios.get(`${API_BASE}/candidates/location-preferences`);
                 if (res.data && res.data.length > 0) {
                     const p = res.data[0];
+                    // Map database RemotePreference to frontend workType
+                    // DB: 'Full', 'Hybrid', 'None' -> Frontend: 'remote', 'hybrid', 'onsite'
+                    let workType = 'hybrid';
+                    if (p.RemotePreference === 'Full') workType = 'remote';
+                    else if (p.RemotePreference === 'None') workType = 'onsite';
+                    else workType = 'hybrid';
+
                     setPreferences({
-                        workType: p.WorkType || 'hybrid',
+                        workType: workType,
                         locations: p.PreferredLocations ? p.PreferredLocations.split(', ').filter(Boolean) : [],
-                        openToRelocate: p.OpenToRelocate === 1 || p.OpenToRelocate === true,
-                        maxCommute: p.MaxCommuteMinutes || 60,
-                        timezone: p.Timezone || 'UTC'
+                        openToRelocate: p.WillingToRelocate === 1 || p.WillingToRelocate === true,
+                        maxCommute: p.CommuteTimeMax || 60,
+                        locationPriority: p.LocationPriority || 5
                     });
                 }
             } catch (err) {
@@ -54,7 +61,7 @@ const LocationPreferences = () => {
                 locations: preferences.locations,
                 openToRelocate: preferences.openToRelocate,
                 maxCommute: preferences.maxCommute,
-                timezone: preferences.timezone
+                locationPriority: preferences.locationPriority || 5
             });
             setSaved(true);
             setTimeout(() => setSaved(false), 3000);
@@ -85,14 +92,9 @@ const LocationPreferences = () => {
 
     if (loading) {
         return (
-            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <div className="glass-card h-32 rounded-[3rem] animate-pulse"></div>
-                <div className="glass-card h-64 rounded-[3rem] animate-pulse"></div>
-                <div className="glass-card h-48 rounded-[3rem] animate-pulse"></div>
-                <div className="grid grid-cols-2 gap-8">
-                    <div className="glass-card h-32 rounded-[3rem] animate-pulse"></div>
-                    <div className="glass-card h-32 rounded-[3rem] animate-pulse"></div>
-                </div>
+            <div className="flex items-center justify-center py-20">
+                <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
+                <span className="ml-3 text-sm font-black uppercase tracking-widest text-[var(--text-muted)]">Loading Location Preferences...</span>
             </div>
         );
     }

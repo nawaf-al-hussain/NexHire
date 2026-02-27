@@ -7,26 +7,28 @@ const ConsentManagement = () => {
     const [consentData, setConsentData] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
 
-    React.useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const res = await axios.get(`${API_BASE}/analytics/consent-status`);
-                if (res.data && Array.isArray(res.data)) {
-                    setConsentData(res.data);
-                }
-            } catch (err) {
-                console.error("Consent Status Fetch Error:", err);
-            } finally {
-                setLoading(false);
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`${API_BASE}/analytics/consent-status`);
+            if (res.data && Array.isArray(res.data)) {
+                setConsentData(res.data);
             }
-        };
+        } catch (err) {
+            console.error("Consent Status Fetch Error:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
         fetchData();
     }, []);
 
     const getStatusIcon = (status) => {
         if (status === 'Active' || status === 'Granted') return <CheckCircle size={14} className="text-emerald-500" />;
         if (status === 'Expired' || status === 'Revoked') return <XCircle size={14} className="text-rose-500" />;
+        if (status === 'Inactive') return <Clock size={14} className="text-amber-500" />;
         return <Clock size={14} className="text-amber-500" />;
     };
 
@@ -43,22 +45,25 @@ const ConsentManagement = () => {
     };
 
     const sampleData = [
-        { CandidateID: 1, CandidateName: 'John Smith', ConsentType: 'Data Processing', ConsentVersion: '1.0', Status: 'Active', GrantedAt: '2026-01-10', ExpiryDate: '2027-01-10' },
-        { CandidateID: 2, CandidateName: 'Sarah Johnson', ConsentType: 'Data Processing', ConsentVersion: '1.0', Status: 'Active', GrantedAt: '2026-01-15', ExpiryDate: '2027-01-15' },
-        { CandidateID: 3, CandidateName: 'Mike Brown', ConsentType: 'Marketing', ConsentVersion: '1.0', Status: 'Expired', GrantedAt: '2025-06-01', ExpiryDate: '2026-06-01' },
-        { CandidateID: 4, CandidateName: 'Emily Davis', ConsentType: 'Data Processing', ConsentVersion: '1.0', Status: 'Active', GrantedAt: '2026-02-01', ExpiryDate: '2027-02-01' },
-        { CandidateID: 5, CandidateName: 'Alex Wilson', ConsentType: 'Newsletter', ConsentVersion: '1.0', Status: 'Revoked', GrantedAt: '2025-08-01', ExpiryDate: '2026-08-01' }
+        { CandidateID: 1, CandidateName: 'John Smith', ConsentType: 'DataProcessing', ConsentVersion: '1.0', Status: 'Active', GivenAt: '2026-01-10', ExpiryDate: '2027-01-10' },
+        { CandidateID: 2, CandidateName: 'Sarah Johnson', ConsentType: 'DataProcessing', ConsentVersion: '1.0', Status: 'Active', GivenAt: '2026-01-15', ExpiryDate: '2027-01-15' },
+        { CandidateID: 3, CandidateName: 'Mike Brown', ConsentType: 'Marketing', ConsentVersion: '1.0', Status: 'Expired', GivenAt: '2025-06-01', ExpiryDate: '2026-06-01' },
+        { CandidateID: 4, CandidateName: 'Emily Davis', ConsentType: 'DataProcessing', ConsentVersion: '1.0', Status: 'Active', GivenAt: '2026-02-01', ExpiryDate: '2027-02-01' },
+        { CandidateID: 5, CandidateName: 'Alex Wilson', ConsentType: 'Newsletter', ConsentVersion: '1.0', Status: 'Revoked', GivenAt: '2025-08-01', ExpiryDate: '2026-08-01' }
     ];
 
     const displayData = consentData.length > 0 ? consentData : sampleData;
 
     const active = displayData.filter(d => d.Status === 'Active' || d.Status === 'Granted').length;
     const expired = displayData.filter(d => d.Status === 'Expired').length;
-    const revoked = displayData.filter(d => d.Status === 'Revoked').length;
+    const revoked = displayData.filter(d => d.Status === 'Revoked' || d.Status === 'Inactive').length;
 
     if (loading) {
         return (
-            <div className="glass-card h-96 rounded-[3rem] animate-pulse"></div>
+            <div className="flex items-center justify-center py-20">
+                <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
+                <span className="ml-3 text-sm font-black uppercase tracking-widest text-[var(--text-muted)]">Loading Consent Data...</span>
+            </div>
         );
     }
 
@@ -109,7 +114,9 @@ const ConsentManagement = () => {
             <div className="glass-card rounded-[3rem] p-8">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-black uppercase tracking-tight">Consent Records</h3>
-                    <button className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-500">
+                    <button
+                        onClick={fetchData}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-500">
                         <RefreshCw size={12} /> Run Consent Check
                     </button>
                 </div>
@@ -132,14 +139,16 @@ const ConsentManagement = () => {
                                         <span className="text-sm font-black">{item.CandidateName || 'Unknown'}</span>
                                     </td>
                                     <td className="py-4 pr-4">
-                                        <span className="text-xs font-bold text-[var(--text-secondary)]">{item.ConsentType || 'N/A'}</span>
+                                        <span className="text-xs font-bold text-[var(--text-secondary)]">
+                                            {item.ConsentType ? item.ConsentType.replace(/([A-Z])/g, ' $1').trim() : 'N/A'}
+                                        </span>
                                     </td>
                                     <td className="py-4 pr-4">
                                         <span className="text-xs font-mono text-[var(--text-muted)]">v{item.ConsentVersion || '1.0'}</span>
                                     </td>
                                     <td className="py-4 pr-4">
                                         <span className="text-xs font-bold text-[var(--text-muted)]">
-                                            {item.GrantedAt ? new Date(item.GrantedAt).toLocaleDateString() : '-'}
+                                            {item.GivenAt ? new Date(item.GivenAt).toLocaleDateString() : item.GrantedAt ? new Date(item.GrantedAt).toLocaleDateString() : '-'}
                                         </span>
                                     </td>
                                     <td className="py-4 pr-4">

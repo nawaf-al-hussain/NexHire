@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, MapPin, Bookmark, Compass, Star, Zap, Target, Bell, TrendingUp, BookOpen, Trophy, FileText, DollarSign } from 'lucide-react';
+import { Search, MapPin, Bookmark, Compass, Star, Zap, Target, Bell, TrendingUp, BookOpen, Trophy, FileText, DollarSign, BarChart3, BellRing, ChevronRight, Briefcase, User } from 'lucide-react';
 import DashboardShell from '../components/DashboardShell';
 import axios from 'axios';
 import API_BASE from '../apiConfig';
@@ -9,6 +9,7 @@ import CandidateApplications from '../components/Candidate/CandidateApplications
 import CandidateInterviews from '../components/Candidate/CandidateInterviews';
 import CandidateSkillsVerification from '../components/Candidate/CandidateSkillsVerification';
 import SkillManagementModal from '../components/Candidate/SkillManagementModal';
+import PushNotifications from '../components/Candidate/PushNotifications';
 import CareerPath from '../components/Candidate/CareerPath';
 import LearningPaths from '../components/Candidate/LearningPaths';
 import Leaderboard from '../components/Candidate/Leaderboard';
@@ -16,6 +17,9 @@ import InterviewPrep from '../components/Candidate/InterviewPrep';
 import SalaryCoach from '../components/Candidate/SalaryCoach';
 import ResumeScore from '../components/Candidate/ResumeScore';
 import LocationPreferences from '../components/Candidate/LocationPreferences';
+import SkillGapAnalysis from '../components/Candidate/SkillGapAnalysis';
+import ProfileManagement from '../components/Candidate/ProfileManagement';
+
 
 const CandidateDashboard = () => {
     const [discoverJobs, setDiscoverJobs] = React.useState([]);
@@ -26,32 +30,134 @@ const CandidateDashboard = () => {
     const [careerPath, setCareerPath] = React.useState([]);
     const [learningPath, setLearningPath] = React.useState([]);
     const [leaderboardData, setLeaderboardData] = React.useState([]);
+    const [globalLeaderboardData, setGlobalLeaderboardData] = React.useState(null);
+    const [userRank, setUserRank] = React.useState(null);
     const [prepMaterials, setPrepMaterials] = React.useState([]);
     const [salaryData, setSalaryData] = React.useState([]);
     const [resumeData, setResumeData] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [activeTab, setActiveTab] = React.useState('Discover Jobs');
     const [isSkillModalOpen, setIsSkillModalOpen] = React.useState(false);
+    const [skillToLearn, setSkillToLearn] = React.useState(null);
+    const [showNotifications, setShowNotifications] = React.useState(false);
+    const [appliedJobIds, setAppliedJobIds] = React.useState(new Set());
+    const [expandedJobId, setExpandedJobId] = React.useState(null);
+
+    // Search state
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const [locationFilter, setLocationFilter] = React.useState('');
+    const [filteredJobs, setFilteredJobs] = React.useState([]);
+
+    // Record daily login on component mount
+    React.useEffect(() => {
+        const recordDailyLogin = async () => {
+            try {
+                const res = await axios.post(`${API_BASE}/candidates/gamification/daily-login`);
+                if (res.data.isNewDay) {
+                    console.log("Daily login recorded! Streak bonus:", res.data.streakBonus);
+                }
+            } catch (err) {
+                // Silently fail - not critical
+                console.log("Daily login not recorded (may already exist)");
+            }
+        };
+        recordDailyLogin();
+    }, []);
+
+    const pendingInvitationsCount = applications.filter(app => app.StatusName === 'Invited').length;
+
+    // Filter jobs based on search query and location
+    const handleSearch = () => {
+        let filtered = [...discoverJobs];
+
+        // Filter by search query (job title, skills, description)
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase().trim();
+            filtered = filtered.filter(job => {
+                const titleMatch = job.JobTitle?.toLowerCase().includes(query);
+                const descMatch = job.Description?.toLowerCase().includes(query);
+                // Handle RequiredSkills as array or string
+                let skillsMatch = false;
+                if (job.RequiredSkills) {
+                    if (Array.isArray(job.RequiredSkills)) {
+                        skillsMatch = job.RequiredSkills.some(skill =>
+                            (skill.SkillName || skill)?.toLowerCase().includes(query)
+                        );
+                    } else if (typeof job.RequiredSkills === 'string') {
+                        skillsMatch = job.RequiredSkills.toLowerCase().includes(query);
+                    }
+                }
+                return titleMatch || descMatch || skillsMatch;
+            });
+        }
+
+        // Filter by location
+        if (locationFilter.trim()) {
+            const loc = locationFilter.toLowerCase().trim();
+            filtered = filtered.filter(job => {
+                const locationMatch = job.Location?.toLowerCase().includes(loc);
+                const remoteMatch = loc.includes('remote') && job.Location?.toLowerCase().includes('remote');
+                return locationMatch || remoteMatch;
+            });
+        }
+
+        setFilteredJobs(filtered);
+    };
+
+    // Reset filtered jobs when discoverJobs changes
+    React.useEffect(() => {
+        setFilteredJobs(discoverJobs);
+    }, [discoverJobs]);
+
+    // Handle Enter key in search inputs
+    const handleSearchKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    };
 
     const candidateNav = [
+        // Job Search Flow
         { icon: Compass, label: 'Discover Jobs', active: activeTab === 'Discover Jobs', onClick: () => setActiveTab('Discover Jobs') },
-        { icon: Bookmark, label: 'Applications', active: activeTab === 'Applications', onClick: () => setActiveTab('Applications') },
+        {
+            icon: Bookmark,
+            label: 'Applications',
+            active: activeTab === 'Applications',
+            onClick: () => setActiveTab('Applications'),
+            badge: pendingInvitationsCount > 0 ? pendingInvitationsCount : null
+        },
         { icon: Target, label: 'Interviews', active: activeTab === 'Interviews', onClick: () => setActiveTab('Interviews') },
-        { icon: Star, label: 'Skill Verify', active: activeTab === 'Skill Verify', onClick: () => setActiveTab('Skill Verify') },
-        { icon: TrendingUp, label: 'Career Path', active: activeTab === 'Career Path', onClick: () => setActiveTab('Career Path') },
-        { icon: BookOpen, label: 'Learning', active: activeTab === 'Learning', onClick: () => setActiveTab('Learning') },
-        { icon: Trophy, label: 'Achievements', active: activeTab === 'Achievements', onClick: () => setActiveTab('Achievements') },
         { icon: FileText, label: 'Interview Prep', active: activeTab === 'Interview Prep', onClick: () => setActiveTab('Interview Prep') },
-        { icon: DollarSign, label: 'Salary Coach', active: activeTab === 'Salary Coach', onClick: () => setActiveTab('Salary Coach') },
+
+        // Career Development
+        { icon: Star, label: 'Skills', active: activeTab === 'Skills', onClick: () => setActiveTab('Skills') },
+        { icon: BarChart3, label: 'Skill Gaps', active: activeTab === 'Skill Gaps', onClick: () => setActiveTab('Skill Gaps') },
+        { icon: BookOpen, label: 'Learning', active: activeTab === 'Learning', onClick: () => setActiveTab('Learning') },
+        { icon: TrendingUp, label: 'Career Path', active: activeTab === 'Career Path', onClick: () => setActiveTab('Career Path') },
+
+        // Application Tools
         { icon: FileText, label: 'Resume Score', active: activeTab === 'Resume Score', onClick: () => setActiveTab('Resume Score') },
+        { icon: DollarSign, label: 'Salary Coach', active: activeTab === 'Salary Coach', onClick: () => setActiveTab('Salary Coach') },
+
+        // Engagement
+        { icon: Trophy, label: 'Achievements', active: activeTab === 'Achievements', onClick: () => setActiveTab('Achievements') },
+
+        // Preferences
         { icon: MapPin, label: 'Location Prefs', active: activeTab === 'Location Prefs', onClick: () => setActiveTab('Location Prefs') },
     ];
 
+
     const handleApply = async (jobID) => {
+        // Prevent duplicate applications
+        if (applications.some(app => app.JobID === jobID) || appliedJobIds.has(jobID)) {
+            return;
+        }
         try {
             await axios.post(`${API_BASE}/candidates/apply`, { jobID });
+            // Add to appliedJobIds immediately so UI shows "Applied" button
+            setAppliedJobIds(prev => new Set([...prev, jobID]));
             alert("Application submitted successfully!");
-            fetchData(); // Refresh data to show new application
+            // Don't call fetchData() - job stays visible with grey button until page refresh
         } catch (err) {
             console.error("Apply Error:", err.response?.data?.error || err.message);
             alert(err.response?.data?.error || "Failed to submit application.");
@@ -105,9 +211,17 @@ const CandidateDashboard = () => {
                 .catch(err => console.error("Learning Path Error:", err));
         }
         if (activeTab === 'Achievements') {
+            // Fetch personal leaderboard data
             axios.get(`${API_BASE}/candidates/leaderboard`)
                 .then(res => setLeaderboardData(res.data))
                 .catch(err => console.error("Leaderboard Error:", err));
+            // Fetch global leaderboard data
+            axios.get(`${API_BASE}/candidates/leaderboard/global`)
+                .then(res => {
+                    setGlobalLeaderboardData(res.data);
+                    setUserRank(res.data.userRank);
+                })
+                .catch(err => console.error("Global Leaderboard Error:", err));
         }
         if (activeTab === 'Interview Prep') {
             axios.get(`${API_BASE}/candidates/interview-prep`)
@@ -130,20 +244,35 @@ const CandidateDashboard = () => {
         // Placeholder - actual generation happens in LearningPaths component
     };
 
+    const handleNavigateToLearning = (skillName) => {
+        setSkillToLearn(skillName);
+        setActiveTab('Learning');
+    };
+
+    // Clear skillToLearn after navigating to Learning tab (after component mounts)
+    React.useEffect(() => {
+        if (activeTab === 'Learning' && skillToLearn) {
+            const timer = setTimeout(() => setSkillToLearn(null), 100);
+            return () => clearTimeout(timer);
+        }
+    }, [activeTab, skillToLearn]);
+
     const renderMainContent = () => {
         switch (activeTab) {
             case 'Applications':
                 return <CandidateApplications applications={applications} loading={loading} onRefresh={fetchData} />;
             case 'Interviews':
                 return <CandidateInterviews interviews={interviews} loading={loading} onConfirm={fetchData} />;
-            case 'Skill Verify':
-                return <CandidateSkillsVerification assessments={assessments} profileSkills={profileSkills} loading={loading} onRefresh={fetchData} />;
+            case 'Skills':
+                return <CandidateSkillsVerification assessments={assessments} profileSkills={profileSkills} loading={loading} onRefresh={fetchData} onAddSkill={() => setIsSkillModalOpen(true)} />;
             case 'Career Path':
                 return <CareerPath careerPath={careerPath} loading={loading} onRefresh={fetchData} />;
             case 'Learning':
-                return <LearningPaths learningPath={learningPath} loading={loading} onGenerate={handleGenerateLearningPath} onRefresh={fetchData} />;
+                return <LearningPaths learningPath={learningPath} loading={loading} onGenerate={handleGenerateLearningPath} onRefresh={fetchData} initialTargetRole={skillToLearn} />;
+            case 'Skill Gaps':
+                return <SkillGapAnalysis loading={loading} onRefresh={fetchData} onNavigateToLearning={handleNavigateToLearning} />;
             case 'Achievements':
-                return <Leaderboard leaderboardData={leaderboardData} loading={loading} />;
+                return <Leaderboard leaderboardData={leaderboardData} loading={loading} globalData={globalLeaderboardData} userRank={userRank} />;
             case 'Interview Prep':
                 return <InterviewPrep prepMaterials={prepMaterials} loading={loading} applications={applications} onGenerate={handleGenerateLearningPath} />;
             case 'Salary Coach':
@@ -152,14 +281,22 @@ const CandidateDashboard = () => {
                 return <ResumeScore resumeData={resumeData} loading={loading} />;
             case 'Location Prefs':
                 return <LocationPreferences />;
+            case 'Profile':
+                return <ProfileManagement onRefresh={fetchData} />;
             default:
+                // Use filteredJobs if search is active, otherwise use discoverJobs
+                const jobsToDisplay = (searchQuery || locationFilter) ? filteredJobs : discoverJobs;
+                const jobsNotApplied = jobsToDisplay.filter(job => !applications.some(app => app.JobID === job.JobID) && !appliedJobIds.has(job.JobID));
+
                 return (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                         <div className="lg:col-span-2">
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex items-center gap-3">
                                     <Target className="w-5 h-5 text-indigo-500" />
-                                    <h2 className="text-lg font-black uppercase tracking-tighter">Matches Found for You</h2>
+                                    <h2 className="text-lg font-black uppercase tracking-tighter">
+                                        {(searchQuery || locationFilter) ? 'Search Results' : 'Matches Found for You'}
+                                    </h2>
                                 </div>
                             </div>
 
@@ -169,59 +306,178 @@ const CandidateDashboard = () => {
                                         <Zap className="w-12 h-12 text-indigo-500 animate-pulse mb-4" />
                                         <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Querying Match Engine...</p>
                                     </div>
-                                ) : discoverJobs.length === 0 ? (
+                                ) : jobsNotApplied.length === 0 ? (
                                     <div className="p-12 border-2 border-dashed border-[var(--border-primary)] rounded-[3rem] text-center bg-[var(--bg-accent)]/5">
-                                        <p className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest italic opacity-40">No precision matches found. Expand your skill profile.</p>
+                                        <p className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest italic opacity-40">
+                                            {(searchQuery || locationFilter)
+                                                ? 'No jobs match your search criteria. Try different keywords.'
+                                                : 'No precision matches found. Expand your skill profile.'}
+                                        </p>
                                     </div>
                                 ) : (
-                                    discoverJobs.map((job) => (
-                                        <div key={job.JobID} className="group bg-[var(--bg-accent)] p-8 rounded-[2.5rem] border border-[var(--border-primary)] hover:bg-indigo-500/[0.02] transition-all cursor-pointer relative overflow-hidden">
-                                            <div className="absolute top-0 right-0 w-1 h-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                                <div className="flex gap-6">
-                                                    <div className="w-16 h-16 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-primary)] flex items-center justify-center font-black text-lg text-[var(--text-muted)] group-hover:text-indigo-500">
-                                                        {job.JobTitle.substring(0, 2).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-xl font-black group-hover:text-indigo-500 transition-colors leading-tight">{job.JobTitle}</h4>
-                                                        <div className="flex items-center gap-3 mt-1">
-                                                            <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{job.Location}</p>
-                                                            <span className="text-[8px] text-[var(--text-muted)] font-black uppercase tracking-widest opacity-60">• {job.MinExperience}+ Yrs Exp</span>
+                                    jobsNotApplied.map((job) => {
+                                        const isExpanded = expandedJobId === job.JobID;
+                                        const isApplied = applications.some(app => app.JobID === job.JobID) || appliedJobIds.has(job.JobID);
+                                        return (
+                                            <div key={job.JobID}
+                                                className={`rounded-[2.5rem] border transition-all cursor-pointer relative overflow-hidden ${isExpanded ? 'border-indigo-500/30 bg-indigo-500/[0.02]' : 'border-[var(--border-primary)] bg-[var(--bg-accent)] hover:bg-indigo-500/[0.02]'}`}
+                                                onClick={() => setExpandedJobId(isExpanded ? null : job.JobID)}
+                                            >
+                                                <div className="absolute top-0 right-0 w-1 h-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-8">
+                                                    <div className="flex gap-6">
+                                                        <div className="w-16 h-16 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-primary)] flex items-center justify-center font-black text-lg text-[var(--text-muted)] group-hover:text-indigo-500 shrink-0">
+                                                            {job.JobTitle.substring(0, 2).toUpperCase()}
                                                         </div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-8">
-                                                    <div className="flex gap-2">
-                                                        {job.MatchedSkillsCount > 0 && (
-                                                            <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-[10px] font-black text-emerald-500 uppercase tracking-widest">
-                                                                {job.MatchedSkillsCount} Skill Matches
-                                                            </span>
-                                                        )}
-                                                        <span className="px-3 py-1 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Active</span>
-                                                    </div>
-                                                    <div className="text-right flex flex-col items-end gap-3">
-                                                        <div className="flex flex-col items-end">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-2xl font-black">
-                                                                    {job.MatchedSkillsCount > 0 ? Math.min(100, Math.round((job.MatchedSkillsCount / 3) * 100)) : '0'}%
-                                                                </span>
+                                                        <div>
+                                                            <h4 className="text-xl font-black group-hover:text-indigo-500 transition-colors leading-tight">{job.JobTitle}</h4>
+                                                            <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                                                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{job.Location}</p>
+                                                                <span className="text-[8px] text-[var(--text-muted)] font-black uppercase tracking-widest opacity-60">• {job.MinExperience}+ Yrs Exp</span>
                                                             </div>
-                                                            <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest opacity-40">Precision</div>
                                                         </div>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleApply(job.JobID);
-                                                            }}
-                                                            className="px-6 py-2 bg-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20"
-                                                        >
-                                                            Apply Now
-                                                        </button>
+                                                    </div>
+                                                    <div className="flex items-center gap-8 shrink-0">
+                                                        <div className="flex gap-2">
+                                                            {job.MatchedSkillsCount > 0 && (
+                                                                <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-[10px] font-black text-emerald-500 uppercase tracking-widest">
+                                                                    {job.MatchedSkillsCount} Skill Matches
+                                                                </span>
+                                                            )}
+                                                            <span className="px-3 py-1 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Active</span>
+                                                        </div>
+                                                        <div className="text-right flex flex-col items-end gap-3">
+                                                            <div className="flex flex-col items-end">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-2xl font-black">
+                                                                        {job.MatchedSkillsCount > 0 ? Math.min(100, Math.round((job.MatchedSkillsCount / 3) * 100)) : '0'}%
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest opacity-40">Precision</div>
+                                                            </div>
+                                                            {isApplied ? (
+                                                                <button
+                                                                    disabled
+                                                                    className="px-6 py-2 bg-gray-400 text-white rounded-xl font-black text-[10px] uppercase tracking-widest cursor-not-allowed"
+                                                                >
+                                                                    Applied
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleApply(job.JobID);
+                                                                    }}
+                                                                    className="px-6 py-2 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20"
+                                                                >
+                                                                    Apply Now
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}>
+                                                            <ChevronRight size={16} />
+                                                        </div>
                                                     </div>
                                                 </div>
+
+                                                {/* Expanded Job Detail Panel */}
+                                                {isExpanded && (
+                                                    <div className="px-8 pb-8 space-y-6 border-t border-indigo-500/10 pt-6 animate-in slide-in-from-top-2 duration-200">
+                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                            {job.MinExperience !== undefined && (
+                                                                <div className="p-4 bg-[var(--bg-primary)] rounded-2xl border border-[var(--border-primary)]">
+                                                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-1">Min. Experience</p>
+                                                                    <p className="text-sm font-black">{job.MinExperience} yr{job.MinExperience !== 1 ? 's' : ''}</p>
+                                                                </div>
+                                                            )}
+                                                            {job.Vacancies !== undefined && (
+                                                                <div className="p-4 bg-[var(--bg-primary)] rounded-2xl border border-[var(--border-primary)]">
+                                                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-1">Openings</p>
+                                                                    <p className="text-sm font-black">{job.Vacancies}</p>
+                                                                </div>
+                                                            )}
+                                                            {(job.SalaryMin || job.SalaryMax) && (
+                                                                <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                                                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500 mb-1">Salary Range</p>
+                                                                    <p className="text-sm font-black text-emerald-500">
+                                                                        ${job.SalaryMin ? job.SalaryMin.toLocaleString() : '?'} - ${job.SalaryMax ? job.SalaryMax.toLocaleString() : '?'}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Required Skills Section */}
+                                                        {job.RequiredSkills && (job.RequiredSkills.mandatory.length > 0 || job.RequiredSkills.optional.length > 0) && (
+                                                            <div className="space-y-4">
+                                                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Required Skills</p>
+
+                                                                {/* Mandatory Skills */}
+                                                                {job.RequiredSkills.mandatory.length > 0 && (
+                                                                    <div>
+                                                                        <p className="text-[8px] font-black text-rose-500 uppercase tracking-widest mb-2">Mandatory</p>
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            {job.RequiredSkills.mandatory.map((skill, idx) => (
+                                                                                <span
+                                                                                    key={`mandatory-${idx}`}
+                                                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${skill.MeetsRequirement
+                                                                                        ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                                                                        : skill.HasSkill
+                                                                                            ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                                                                                            : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                                                                                        }`}
+                                                                                >
+                                                                                    {skill.MeetsRequirement && <span className="text-[8px]">✓</span>}
+                                                                                    {skill.HasSkill && !skill.MeetsRequirement && <span className="text-[8px]">⚠</span>}
+                                                                                    {skill.SkillName}
+                                                                                    <span className="text-[8px] opacity-60">
+                                                                                        {skill.HasSkill ? `L${skill.CandidateProficiencyLevel}` : `L${skill.MinProficiency}`}
+                                                                                    </span>
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Optional Skills */}
+                                                                {job.RequiredSkills.optional.length > 0 && (
+                                                                    <div>
+                                                                        <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-2">Preferred</p>
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            {job.RequiredSkills.optional.map((skill, idx) => (
+                                                                                <span
+                                                                                    key={`optional-${idx}`}
+                                                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${skill.MeetsRequirement
+                                                                                        ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                                                                        : skill.HasSkill
+                                                                                            ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                                                                                            : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                                                                                        }`}
+                                                                                >
+                                                                                    {skill.MeetsRequirement && <span className="text-[8px]">✓</span>}
+                                                                                    {skill.HasSkill && !skill.MeetsRequirement && <span className="text-[8px]">⚠</span>}
+                                                                                    {skill.SkillName}
+                                                                                    <span className="text-[8px] opacity-60">
+                                                                                        {skill.HasSkill ? `L${skill.CandidateProficiencyLevel}` : `L${skill.MinProficiency}`}
+                                                                                    </span>
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {job.Description && (
+                                                            <div className="p-5 bg-[var(--bg-primary)] rounded-2xl border border-[var(--border-primary)]">
+                                                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3">Job Description</p>
+                                                                <p className="text-xs leading-relaxed text-[var(--text-secondary)] line-clamp-6">{job.Description}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </div>
                         </div>
@@ -251,7 +507,7 @@ const CandidateDashboard = () => {
 
                                 <button
                                     onClick={() => setIsSkillModalOpen(true)}
-                                    className="w-full py-4 bg-indigo-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 transition-all"
+                                    className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 transition-all"
                                 >
                                     Manage Skills
                                 </button>
@@ -277,15 +533,12 @@ const CandidateDashboard = () => {
             title={activeTab === 'Discover Jobs' ? "Algorithmically Matched" : activeTab}
             subtitle={activeTab === 'Discover Jobs' ? "Your Career" : "Candidate Portal"}
             navigation={candidateNav}
+            onNotificationClick={() => setShowNotifications(true)}
+            onProfileClick={() => setActiveTab('Profile')}
         >
             {activeTab === 'Discover Jobs' && (
-                <div className="relative isolate mb-12 p-12 rounded-[3rem] bg-[var(--bg-secondary)] border border-[var(--border-primary)] overflow-hidden shadow-3xl">
+                <div className="relative isolate mb-12 p-8 rounded-[3rem] bg-[var(--bg-secondary)] border border-[var(--border-primary)] overflow-hidden shadow-3xl">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 blur-[100px] rounded-full -z-10 animate-pulse"></div>
-
-                    <h1 className="text-4xl font-black tracking-tighter mb-8 max-w-2xl leading-tight">
-                        Your Next Opportunity, <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-emerald-500">Precision Engineered.</span>
-                    </h1>
 
                     <div className="flex flex-col lg:flex-row gap-4 p-3 bg-[var(--bg-primary)]/50 backdrop-blur-xl border border-[var(--border-primary)] rounded-[2rem]">
                         <div className="flex-1 relative group">
@@ -293,6 +546,9 @@ const CandidateDashboard = () => {
                             <input
                                 type="text"
                                 placeholder="Project Architect, SQL dev, or skills..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={handleSearchKeyDown}
                                 className="w-full bg-[var(--bg-accent)] border-transparent text-[var(--text-primary)] rounded-2xl py-4 pl-14 pr-4 focus:bg-white/10 dark:focus:bg-white/5 outline-none transition-all placeholder:text-[var(--text-muted)] font-bold text-sm"
                             />
                         </div>
@@ -301,13 +557,41 @@ const CandidateDashboard = () => {
                             <input
                                 type="text"
                                 placeholder="US / Remote"
+                                value={locationFilter}
+                                onChange={(e) => setLocationFilter(e.target.value)}
+                                onKeyDown={handleSearchKeyDown}
                                 className="w-full bg-[var(--bg-accent)] border-transparent text-[var(--text-primary)] rounded-2xl py-4 pl-14 pr-4 focus:bg-white/10 dark:focus:bg-white/5 outline-none transition-all placeholder:text-[var(--text-muted)] font-bold text-sm"
                             />
                         </div>
-                        <button className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 transition-all">
+                        <button
+                            onClick={handleSearch}
+                            className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 transition-all flex items-center justify-center gap-2"
+                        >
+                            <Search size={16} />
                             Query Jobs
                         </button>
+                        {(searchQuery || locationFilter) && (
+                            <button
+                                onClick={() => {
+                                    setSearchQuery('');
+                                    setLocationFilter('');
+                                    setFilteredJobs(discoverJobs);
+                                }}
+                                className="px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-accent)] transition-all"
+                            >
+                                Clear
+                            </button>
+                        )}
                     </div>
+
+                    {/* Search Results Count */}
+                    {(searchQuery || locationFilter) && (
+                        <div className="mt-4 text-sm text-[var(--text-muted)]">
+                            Showing {filteredJobs.length} of {discoverJobs.length} jobs
+                            {searchQuery && <span className="ml-2">for "<span className="text-indigo-500 font-bold">{searchQuery}</span>"</span>}
+                            {locationFilter && <span className="ml-2">in "<span className="text-indigo-500 font-bold">{locationFilter}</span>"</span>}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -319,6 +603,36 @@ const CandidateDashboard = () => {
                 onRefresh={fetchData}
                 currentSkills={profileSkills}
             />
+
+            {/* Notifications Modal */}
+            {showNotifications && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={() => setShowNotifications(false)}
+                    />
+                    <div className="relative w-full max-w-lg max-h-[80vh] overflow-hidden bg-[var(--bg-primary)] rounded-[2.5rem] border border-[var(--border-primary)] shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between p-6 border-b border-[var(--border-primary)]">
+                            <h2 className="text-xl font-black text-[var(--text-primary)]">Notifications</h2>
+                            <button
+                                onClick={() => setShowNotifications(false)}
+                                className="w-12 h-12 rounded-xl bg-[var(--bg-accent)] border border-[var(--border-primary)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto max-h-[calc(80vh-80px)]">
+                            <PushNotifications
+                                loading={loading}
+                                onRefresh={fetchData}
+                                showHeader={false}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </DashboardShell>
     );
 };

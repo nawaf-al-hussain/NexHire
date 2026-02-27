@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { DollarSign, TrendingUp, Target, Sparkles, Loader2, Calculator } from 'lucide-react';
+import {
+    DollarSign, TrendingUp, Target, Sparkles, Loader2, Calculator,
+    CheckCircle, AlertCircle, Clock, MessageSquare, Lightbulb,
+    ArrowUpRight, ArrowDownRight, Minus
+} from 'lucide-react';
 import axios from 'axios';
 import API_BASE from '../../apiConfig';
 
@@ -25,19 +29,50 @@ const SalaryCoach = ({ salaryData, loading, applications }) => {
             setNegotiationResult(res.data);
         } catch (err) {
             console.error('Generate Strategy Error:', err);
-            alert('Failed to generate negotiation strategy.');
+            alert(err.response?.data?.error || 'Failed to generate negotiation strategy.');
         } finally {
             setGenerating(false);
         }
     };
 
-    if (loading || generating) {
+    const getAssessmentColor = (assessment) => {
+        if (!assessment) return 'text-gray-500';
+        if (assessment.includes('Strongly Under')) return 'text-rose-500';
+        if (assessment.includes('Below')) return 'text-amber-500';
+        if (assessment.includes('Competitive')) return 'text-blue-500';
+        return 'text-emerald-500';
+    };
+
+    const getAssessmentBg = (assessment) => {
+        if (!assessment) return 'bg-gray-500/10 border-gray-500/20';
+        if (assessment.includes('Strongly Under')) return 'bg-rose-500/10 border-rose-500/20';
+        if (assessment.includes('Below')) return 'bg-amber-500/10 border-amber-500/20';
+        if (assessment.includes('Competitive')) return 'bg-blue-500/10 border-blue-500/20';
+        return 'bg-emerald-500/10 border-emerald-500/20';
+    };
+
+    const getAssessmentIcon = (assessment) => {
+        if (!assessment) return <Minus className="w-5 h-5" />;
+        if (assessment.includes('Strongly Under')) return <ArrowDownRight className="w-5 h-5" />;
+        if (assessment.includes('Below')) return <ArrowDownRight className="w-5 h-5" />;
+        if (assessment.includes('Competitive')) return <Minus className="w-5 h-5" />;
+        return <ArrowUpRight className="w-5 h-5" />;
+    };
+
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount || 0);
+    };
+
+    if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-20">
                 <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
-                <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
-                    {generating ? 'Analyzing Market Data...' : 'Loading Salary Insights...'}
-                </p>
+                <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Loading Salary Insights...</p>
             </div>
         );
     }
@@ -70,7 +105,7 @@ const SalaryCoach = ({ salaryData, loading, applications }) => {
                         <div key={index} className="flex items-center justify-between p-4 bg-[var(--bg-accent)] rounded-2xl border border-[var(--border-primary)]">
                             <div>
                                 <p className="text-xs font-black">{skill.SkillName}</p>
-                                <p className="text-[10px] text-[var(--text-muted)]">Avg: ${(skill.AverageSalary || 90000).toLocaleString()}</p>
+                                <p className="text-[10px] text-[var(--text-muted)]">Avg: {formatCurrency(skill.AverageSalary || 90000)}</p>
                             </div>
                             <div className="text-right">
                                 <span className={`text-xs font-black ${(skill.TrendDirection || 'Up') === 'Up' ? 'text-emerald-500' : 'text-amber-500'}`}>
@@ -105,7 +140,7 @@ const SalaryCoach = ({ salaryData, loading, applications }) => {
 
                     <input
                         type="number"
-                        placeholder="Current Salary"
+                        placeholder="Current/Offered Salary"
                         value={currentSalary}
                         onChange={(e) => setCurrentSalary(e.target.value)}
                         className="bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-indigo-500"
@@ -113,7 +148,7 @@ const SalaryCoach = ({ salaryData, loading, applications }) => {
 
                     <input
                         type="number"
-                        placeholder="Target Salary"
+                        placeholder="Target Salary (Optional)"
                         value={targetSalary}
                         onChange={(e) => setTargetSalary(e.target.value)}
                         className="bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-indigo-500"
@@ -123,20 +158,167 @@ const SalaryCoach = ({ salaryData, loading, applications }) => {
                 <button
                     onClick={handleGenerateStrategy}
                     disabled={generating}
-                    className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <Calculator size={16} />
-                    Generate Strategy
+                    {generating ? (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Analyzing Market Data...
+                        </>
+                    ) : (
+                        <>
+                            <Calculator size={16} />
+                            Generate Strategy
+                        </>
+                    )}
                 </button>
             </div>
 
-            {/* Results */}
+            {/* Results - Visually Enhanced */}
             {negotiationResult && (
-                <div className="glass-card p-8 rounded-[2.5rem] border-emerald-500/30">
-                    <h3 className="text-sm font-black uppercase tracking-widest mb-4 text-emerald-500">Your Personalized Strategy</h3>
-                    <pre className="text-xs text-[var(--text-muted)] whitespace-pre-wrap">
-                        {JSON.stringify(negotiationResult, null, 2)}
-                    </pre>
+                <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
+                    {/* Offer Assessment Card */}
+                    <div className={`p-8 rounded-[2.5rem] border ${getAssessmentBg(negotiationResult.OfferAssessment)}`}>
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-4">
+                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${getAssessmentBg(negotiationResult.OfferAssessment)}`}>
+                                    {getAssessmentIcon(negotiationResult.OfferAssessment)}
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black">Offer Assessment</h3>
+                                    <p className={`text-sm font-bold ${getAssessmentColor(negotiationResult.OfferAssessment)}`}>
+                                        {negotiationResult.OfferAssessment || 'Analyzing...'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-4xl font-black text-emerald-500">
+                                    {formatCurrency(negotiationResult.RecommendedCounterOffer)}
+                                </div>
+                                <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Recommended Counter</p>
+                            </div>
+                        </div>
+
+                        {/* Salary Comparison Bar */}
+                        <div className="mb-6">
+                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">
+                                <span>25th Percentile</span>
+                                <span>Market Average</span>
+                                <span>75th Percentile</span>
+                            </div>
+                            <div className="relative h-4 bg-[var(--bg-accent)] rounded-full overflow-hidden">
+                                <div className="absolute inset-0 flex">
+                                    <div className="w-1/4 bg-rose-500/30"></div>
+                                    <div className="w-1/4 bg-amber-500/30"></div>
+                                    <div className="w-1/4 bg-blue-500/30"></div>
+                                    <div className="w-1/4 bg-emerald-500/30"></div>
+                                </div>
+                                {/* Offer marker */}
+                                <div
+                                    className="absolute top-0 bottom-0 w-1 bg-white shadow-lg"
+                                    style={{
+                                        left: `${Math.min(100, Math.max(0, negotiationResult.OfferPercentile || 50))}%`
+                                    }}
+                                ></div>
+                            </div>
+                            <div className="flex justify-between mt-2">
+                                <span className="text-xs font-bold text-rose-500">{formatCurrency(negotiationResult.Market25thPercentile)}</span>
+                                <span className="text-xs font-bold text-blue-500">{formatCurrency(negotiationResult.MarketAverage)}</span>
+                                <span className="text-xs font-bold text-emerald-500">{formatCurrency(negotiationResult.Market75thPercentile)}</span>
+                            </div>
+                        </div>
+
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="p-4 rounded-2xl bg-[var(--bg-primary)]/50 text-center">
+                                <DollarSign className="w-5 h-5 text-blue-500 mx-auto mb-2" />
+                                <div className="text-lg font-black">{formatCurrency(negotiationResult.InitialOffer)}</div>
+                                <div className="text-[8px] font-black text-[var(--text-muted)] uppercase tracking-widest">Initial Offer</div>
+                            </div>
+                            <div className="p-4 rounded-2xl bg-[var(--bg-primary)]/50 text-center">
+                                <TrendingUp className="w-5 h-5 text-emerald-500 mx-auto mb-2" />
+                                <div className="text-lg font-black text-emerald-500">+{formatCurrency(negotiationResult.NegotiationRoom)}</div>
+                                <div className="text-[8px] font-black text-[var(--text-muted)] uppercase tracking-widest">Negotiation Room</div>
+                            </div>
+                            <div className="p-4 rounded-2xl bg-[var(--bg-primary)]/50 text-center">
+                                <Target className="w-5 h-5 text-purple-500 mx-auto mb-2" />
+                                <div className="text-lg font-black">{negotiationResult.OfferPercentile}th</div>
+                                <div className="text-[8px] font-black text-[var(--text-muted)] uppercase tracking-widest">Percentile</div>
+                            </div>
+                            {negotiationResult.TargetSalary && (
+                                <div className="p-4 rounded-2xl bg-[var(--bg-primary)]/50 text-center">
+                                    <ArrowUpRight className="w-5 h-5 text-amber-500 mx-auto mb-2" />
+                                    <div className="text-lg font-black">{formatCurrency(negotiationResult.TargetSalary)}</div>
+                                    <div className="text-[8px] font-black text-[var(--text-muted)] uppercase tracking-widest">Your Target</div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Negotiation Script */}
+                    <div className="glass-card p-8 rounded-[2.5rem]">
+                        <div className="flex items-center gap-3 mb-4">
+                            <MessageSquare className="w-5 h-5 text-indigo-500" />
+                            <h3 className="text-sm font-black uppercase tracking-widest">Suggested Response Script</h3>
+                        </div>
+                        <div className="p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/20">
+                            <p className="text-sm text-[var(--text-primary)] leading-relaxed italic">
+                                "{negotiationResult.NegotiationScript}"
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => navigator.clipboard.writeText(negotiationResult.NegotiationScript)}
+                            className="mt-4 px-6 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 text-xs font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-colors"
+                        >
+                            Copy to Clipboard
+                        </button>
+                    </div>
+
+                    {/* Timing & Strategy */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="glass-card p-6 rounded-[2rem]">
+                            <div className="flex items-center gap-3 mb-4">
+                                <Clock className="w-5 h-5 text-amber-500" />
+                                <h3 className="text-sm font-black uppercase tracking-widest">Timing Strategy</h3>
+                            </div>
+                            <p className="text-sm text-[var(--text-muted)]">
+                                {negotiationResult.TimingRecommendation}
+                            </p>
+                        </div>
+
+                        <div className="glass-card p-6 rounded-[2rem]">
+                            <div className="flex items-center gap-3 mb-4">
+                                <Lightbulb className="w-5 h-5 text-amber-500" />
+                                <h3 className="text-sm font-black uppercase tracking-widest">Fallback Options</h3>
+                            </div>
+                            <p className="text-sm text-[var(--text-muted)]">
+                                {negotiationResult.FallbackOptions}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Gap to Target */}
+                    {negotiationResult.TargetSalary && negotiationResult.GapToTarget !== undefined && (
+                        <div className={`p-6 rounded-[2rem] border ${negotiationResult.GapToTarget > 0 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    {negotiationResult.GapToTarget > 0 ? (
+                                        <AlertCircle className="w-5 h-5 text-amber-500" />
+                                    ) : (
+                                        <CheckCircle className="w-5 h-5 text-emerald-500" />
+                                    )}
+                                    <span className="text-sm font-bold">
+                                        {negotiationResult.GapToTarget > 0
+                                            ? 'Gap to your target salary'
+                                            : 'Your target is achievable!'}
+                                    </span>
+                                </div>
+                                <span className={`text-lg font-black ${negotiationResult.GapToTarget > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                    {negotiationResult.GapToTarget > 0 ? '+' : ''}{formatCurrency(Math.abs(negotiationResult.GapToTarget))}
+                                </span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -158,6 +340,10 @@ const SalaryCoach = ({ salaryData, loading, applications }) => {
                     <li className="flex items-start gap-3 text-xs font-medium text-[var(--text-muted)]">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
                         Practice your pitch with confidence
+                    </li>
+                    <li className="flex items-start gap-3 text-xs font-medium text-[var(--text-muted)]">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
+                        Consider the total package (equity, benefits, growth opportunities)
                     </li>
                 </ul>
             </div>
