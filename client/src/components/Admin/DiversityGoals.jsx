@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, Plus, CheckCircle, TrendingUp, Calendar, RefreshCw, UsersRound, Heart, Shield } from 'lucide-react';
+import { Target, Plus, CheckCircle, TrendingUp, Calendar, RefreshCw, UsersRound, Heart, Shield, X } from 'lucide-react';
 import axios from 'axios';
 import API_BASE from '../../apiConfig';
 import DiversityChart from '../Charts/DiversityChart';
@@ -97,25 +97,27 @@ const DiversityGoals = () => {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
-                        <Target className="text-indigo-500" size={28} />
-                        Diversity Goals
-                    </h2>
-                    <p className="text-sm text-[var(--text-muted)] mt-1">
-                        Set and track diversity hiring targets
-                    </p>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+            {/* Gradient Header */}
+            <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-emerald-500/5 to-teal-500/5 border border-emerald-500/20">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                            <Target size={28} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black uppercase tracking-tight">Diversity Goals</h2>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Set and track diversity hiring targets</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-500 transition-all"
+                    >
+                        <Plus size={18} />
+                        New Goal
+                    </button>
                 </div>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-500 transition-all"
-                >
-                    <Plus size={18} />
-                    New Goal
-                </button>
             </div>
 
             {/* Diversity Analytics Charts - 3 Column Grid */}
@@ -260,81 +262,103 @@ const DiversityGoals = () => {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="glass-card rounded-[2rem] p-8 w-full max-w-md border border-[var(--border-primary)]">
-                        <h3 className="text-lg font-black uppercase mb-6">Create Diversity Goal</h3>
-                        <form onSubmit={createGoal} className="space-y-4">
-                            <div>
-                                <label className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-2 block">
-                                    Metric Type
-                                </label>
-                                <select
-                                    value={newGoal.metricType}
-                                    onChange={(e) => setNewGoal({ ...newGoal, metricType: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl bg-[var(--bg-accent)] border border-[var(--border-primary)] text-[var(--text-primary)] font-bold"
-                                >
-                                    <option value="Gender">Gender</option>
-                                    <option value="Ethnicity">Ethnicity</option>
-                                    <option value="Disability">Disability</option>
-                                    <option value="Veteran">Veteran</option>
-                                </select>
-                            </div>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-300">
+                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setShowModal(false)}></div>
 
-                            <div>
-                                <label className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-2 block">
-                                    Target Percentage (%)
-                                </label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="100"
-                                    value={newGoal.targetPercentage}
-                                    onChange={(e) => setNewGoal({ ...newGoal, targetPercentage: parseInt(e.target.value) })}
-                                    className="w-full px-4 py-3 rounded-xl bg-[var(--bg-accent)] border border-[var(--border-primary)] text-[var(--text-primary)] font-bold"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-2 block">
-                                        Start Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={newGoal.startDate}
-                                        onChange={(e) => setNewGoal({ ...newGoal, startDate: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl bg-[var(--bg-accent)] border border-[var(--border-primary)] text-[var(--text-primary)] font-bold"
-                                    />
+                    <div className="relative bg-[var(--bg-primary)] border border-[var(--border-primary)] w-full max-w-md overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col text-[var(--text-primary)]">
+                        {/* Header */}
+                        <div className="p-8 border-b border-[var(--border-primary)] flex items-center justify-between bg-gradient-to-r from-emerald-500/5 to-teal-500/5">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                    <Target className="text-emerald-500" size={24} />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-2 block">
-                                        End Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={newGoal.endDate}
-                                        onChange={(e) => setNewGoal({ ...newGoal, endDate: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl bg-[var(--bg-accent)] border border-[var(--border-primary)] text-[var(--text-primary)] font-bold"
-                                    />
+                                    <h3 className="text-xl font-black tracking-tight">Create Diversity Goal</h3>
+                                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-1 italic">Set measurable diversity targets</p>
                                 </div>
                             </div>
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="p-2 hover:bg-[var(--bg-tertiary)] rounded-xl transition-all"
+                            >
+                                <X size={20} className="text-[var(--text-muted)]" />
+                            </button>
+                        </div>
 
-                            <div className="flex gap-4 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowModal(false)}
-                                    className="flex-1 py-3 rounded-xl border border-[var(--border-primary)] font-black text-xs uppercase tracking-widest"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest"
-                                >
-                                    Create Goal
-                                </button>
-                            </div>
-                        </form>
+                        <div className="p-8">
+                            <form onSubmit={createGoal} className="space-y-6">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3 block">
+                                        Metric Type
+                                    </label>
+                                    <select
+                                        value={newGoal.metricType}
+                                        onChange={(e) => setNewGoal({ ...newGoal, metricType: e.target.value })}
+                                        className="w-full px-4 py-4 rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-primary)] text-[var(--text-primary)] font-bold focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none transition-all"
+                                    >
+                                        <option value="Gender">Gender</option>
+                                        <option value="Ethnicity">Ethnicity</option>
+                                        <option value="Disability">Disability</option>
+                                        <option value="Veteran">Veteran</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3 block">
+                                        Target Percentage (%)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        value={newGoal.targetPercentage}
+                                        onChange={(e) => setNewGoal({ ...newGoal, targetPercentage: parseInt(e.target.value) })}
+                                        className="w-full px-4 py-4 rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-primary)] text-[var(--text-primary)] font-bold focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none transition-all"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3 block">
+                                            Start Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={newGoal.startDate}
+                                            onChange={(e) => setNewGoal({ ...newGoal, startDate: e.target.value })}
+                                            className="w-full px-4 py-4 rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-primary)] text-[var(--text-primary)] font-bold focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3 block">
+                                            End Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={newGoal.endDate}
+                                            onChange={(e) => setNewGoal({ ...newGoal, endDate: e.target.value })}
+                                            className="w-full px-4 py-4 rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-primary)] text-[var(--text-primary)] font-bold focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowModal(false)}
+                                        className="flex-1 px-6 py-4 rounded-2xl border border-[var(--border-primary)] text-[var(--text-secondary)] font-black uppercase text-xs tracking-widest hover:bg-[var(--bg-accent)] transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black uppercase text-xs tracking-widest hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 transition-all"
+                                    >
+                                        Create Goal
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}

@@ -144,6 +144,19 @@ const TalentPool = () => {
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Gradient Header */}
+            <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 border border-blue-500/20">
+                <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                        <Users size={28} />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-black uppercase tracking-tight">Talent Pool</h2>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Browse and manage candidate profiles</p>
+                    </div>
+                </div>
+            </div>
+
             {/* Invite Button */}
             {selectedCandidates.length > 0 && (
                 <div className="flex items-center justify-between p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
@@ -248,7 +261,7 @@ const TalentPool = () => {
                                             <span className="text-xs font-bold text-[var(--text-secondary)]">{candidate.Location || 'Remote'}</span>
                                         </td>
                                         <td className="py-4 pr-4">
-                                            <span className="text-xs font-bold text-[var(--text-secondary)]">{candidate.YearsExperience || 0} years</span>
+                                            <span className="text-xs font-bold text-[var(--text-secondary)]">{candidate.YearsOfExperience || 0} years</span>
                                         </td>
                                         <td className="py-4 pr-4">
                                             <div className="flex flex-wrap gap-1">
@@ -269,10 +282,10 @@ const TalentPool = () => {
                                                 <div className="w-16 h-2 bg-[var(--bg-accent)] rounded-full overflow-hidden">
                                                     <div
                                                         className="h-full bg-indigo-500 rounded-full"
-                                                        style={{ width: `${candidate.ResumeScore || 0}%` }}
+                                                        style={{ width: `${candidate.ResumeScore ? candidate.ResumeScore : 0}%` }}
                                                     ></div>
                                                 </div>
-                                                <span className="text-[9px] font-black text-indigo-500">{candidate.ResumeScore || 0}%</span>
+                                                <span className="text-[9px] font-black text-indigo-500">{candidate.ResumeScore ? candidate.ResumeScore + '%' : 'N/A'}</span>
                                             </div>
                                         </td>
                                         <td className="py-4 pr-4">

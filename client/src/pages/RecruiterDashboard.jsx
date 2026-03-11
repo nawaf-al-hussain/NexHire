@@ -7,8 +7,6 @@ import CandidateMatches from '../components/Jobs/CandidateMatches';
 import ApplicationPipeline from '../components/Jobs/ApplicationPipeline';
 import TalentPool from '../components/Recruiters/TalentPool';
 import HireAnalytics from '../components/Recruiters/HireAnalytics';
-import AdvancedAnalytics from '../components/Recruiters/AdvancedAnalytics';
-import BiasAnalytics from '../components/Recruiters/BiasAnalytics';
 import GhostingRiskDetail from '../components/Recruiters/GhostingRiskDetail';
 import SkillVerificationStatus from '../components/Recruiters/SkillVerificationStatus';
 import TimeToHireDetail from '../components/Recruiters/TimeToHireDetail';
@@ -83,31 +81,33 @@ const RecruiterDashboard = () => {
     }, []);
 
     React.useEffect(() => {
-        if (activeTab === 'Interview Sch') fetchInterviews();
+        if (activeTab === 'Interview Schedule') fetchInterviews();
     }, [activeTab, fetchInterviews]);
 
     const recruiterNav = [
+        // Core Daily Tasks (most frequent)
         { icon: Briefcase, label: 'Job Roles', active: activeTab === 'Job Roles', onClick: () => setActiveTab('Job Roles') },
         { icon: Users, label: 'Talent Pool', active: activeTab === 'Talent Pool', onClick: () => setActiveTab('Talent Pool') },
-        { icon: Clock, label: 'Interview Sch', active: activeTab === 'Interview Sch', onClick: () => setActiveTab('Interview Sch') },
+        { icon: Clock, label: 'Interview Schedule', active: activeTab === 'Interview Schedule', onClick: () => setActiveTab('Interview Schedule') },
         { icon: Video, label: 'Video Interviews', active: activeTab === 'Video Interviews', onClick: () => setActiveTab('Video Interviews') },
-        { icon: TrendingUp, label: 'Hire Analytics', active: activeTab === 'Hire Analytics', onClick: () => setActiveTab('Hire Analytics') },
-        { icon: BarChart3, label: 'Insights', active: activeTab === 'Insights', onClick: () => setActiveTab('Insights') },
-        { icon: Shield, label: 'Bias Detection', active: activeTab === 'Bias Detection', onClick: () => setActiveTab('Bias Detection') },
-        { icon: AlertTriangle, label: 'Ghosting Risk', active: activeTab === 'Ghosting Risk', onClick: () => setActiveTab('Ghosting Risk') },
+        // Candidate Management
         { icon: CheckCircle, label: 'Skill Verify', active: activeTab === 'Skill Verify', onClick: () => setActiveTab('Skill Verify') },
         { icon: FileCheck, label: 'Background Checks', active: activeTab === 'Background Checks', onClick: () => setActiveTab('Background Checks') },
-        { icon: Timer, label: 'Time to Hire', active: activeTab === 'Time to Hire', onClick: () => setActiveTab('Time to Hire') },
         { icon: Activity, label: 'Engagement', active: activeTab === 'Engagement', onClick: () => setActiveTab('Engagement') },
         { icon: Link2, label: 'Platform Sync', active: activeTab === 'Platform Sync', onClick: () => setActiveTab('Platform Sync') },
-        { icon: Bell, label: 'Market Alerts', active: activeTab === 'Market Alerts', onClick: () => setActiveTab('Market Alerts') },
+        // Analytics & Intelligence
+        { icon: TrendingUp, label: 'Hire Analytics', active: activeTab === 'Hire Analytics', onClick: () => setActiveTab('Hire Analytics') },
+        { icon: Timer, label: 'Time to Hire', active: activeTab === 'Time to Hire', onClick: () => setActiveTab('Time to Hire') },
         { icon: Network, label: 'Referral Intel', active: activeTab === 'Referral Intel', onClick: () => setActiveTab('Referral Intel') },
+        { icon: Bell, label: 'Market Alerts', active: activeTab === 'Market Alerts', onClick: () => setActiveTab('Market Alerts') },
+        // Risk & Compliance
+        { icon: AlertTriangle, label: 'Ghosting Risk', active: activeTab === 'Ghosting Risk', onClick: () => setActiveTab('Ghosting Risk') },
+        // AI & Predictions
         { icon: MessageSquare, label: 'AI Questions', active: activeTab === 'AI Questions', onClick: () => setActiveTab('AI Questions') },
         { icon: Brain, label: 'Hire Predictor', active: activeTab === 'Hire Predictor', onClick: () => setActiveTab('Hire Predictor') },
         { icon: UserCheck, label: 'Onboarding', active: activeTab === 'Onboarding', onClick: () => setActiveTab('Onboarding') },
-        { icon: Shield, label: 'Blockchain Verif', active: activeTab === 'Blockchain Verif', onClick: () => setActiveTab('Blockchain Verif') },
         { icon: Lightbulb, label: 'Interview Fatigue', active: activeTab === 'Interview Fatigue', onClick: () => setActiveTab('Interview Fatigue') },
-        { icon: ShieldAlert, label: 'Auto Rejection', active: activeTab === 'Auto Rejection', onClick: () => setActiveTab('Auto Rejection') },
+        { icon: Shield, label: 'Blockchain Verif', active: activeTab === 'Blockchain Verif', onClick: () => setActiveTab('Blockchain Verif') },
     ];
 
     const renderMainContent = () => {
@@ -116,11 +116,6 @@ const RecruiterDashboard = () => {
                 return (
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
                         <div className="lg:col-span-3 space-y-6">
-                            <div className="flex items-center gap-3 mb-6">
-                                <Sparkles className="w-5 h-5 text-indigo-500" />
-                                <h2 className="text-sm font-black uppercase tracking-widest">Active Job Postings</h2>
-                            </div>
-
                             <JobList
                                 refreshTrigger={refreshJobs}
                                 onFindMatches={(job) => setSelectedJobForMatches(job)}
@@ -128,7 +123,8 @@ const RecruiterDashboard = () => {
                                 onDeleteJob={async (id) => {
                                     if (window.confirm("Archive this job posting?")) {
                                         try {
-                                            await axios.delete(`${API_BASE}/jobs/${id}`);
+                                            // Update isActive to false instead of deleting
+                                            await axios.put(`${API_BASE}/jobs/${id}`, { isActive: false });
                                             setRefreshJobs(prev => prev + 1);
                                         } catch (err) {
                                             alert("Failed to archive job.");
@@ -138,6 +134,9 @@ const RecruiterDashboard = () => {
                                 onUpdateJob={() => {
                                     setRefreshJobs(prev => prev + 1);
                                 }}
+                                onOpenJobModal={() => setIsJobModalOpen(true)}
+                                onOpenScreeningBot={() => setActiveTab('Screening Bot')}
+                                onOpenAutoRejection={() => setActiveTab('Auto Rejection')}
                             />
                         </div>
 
@@ -213,10 +212,6 @@ const RecruiterDashboard = () => {
                 return <TalentPool />;
             case 'Hire Analytics':
                 return <HireAnalytics />;
-            case 'Insights':
-                return <AdvancedAnalytics />;
-            case 'Bias Detection':
-                return <BiasAnalytics />;
             case 'Ghosting Risk':
                 return <GhostingRiskDetail />;
             case 'Skill Verify':
@@ -225,22 +220,31 @@ const RecruiterDashboard = () => {
                 return <BackgroundChecks />;
             case 'Time to Hire':
                 return <TimeToHireDetail />;
-            case 'Interview Sch': {
+            case 'Interview Schedule': {
                 const now = new Date();
                 const upcoming = interviews.filter(i => new Date(i.InterviewStart) >= now);
                 const past = interviews.filter(i => new Date(i.InterviewStart) < now);
                 return (
-                    <div className="space-y-10">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
-                                <Calendar className="text-amber-500" size={22} /> Interview Schedule
-                            </h2>
-                            <button
-                                onClick={fetchInterviews}
-                                className="p-3 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-xl hover:border-indigo-500/50 transition-all"
-                            >
-                                <RefreshCw size={16} className={interviewsLoading ? 'animate-spin text-indigo-500' : 'text-[var(--text-muted)]'} />
-                            </button>
+                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                        {/* Gradient Header */}
+                        <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-amber-500/5 to-orange-500/5 border border-amber-500/20">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                                        <Calendar size={28} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-black uppercase tracking-tight">Interview Schedule</h2>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Manage your interviews</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={fetchInterviews}
+                                    className="p-3 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-xl hover:border-amber-500/50 transition-all"
+                                >
+                                    <RefreshCw size={16} className={interviewsLoading ? 'animate-spin text-amber-500' : 'text-[var(--text-muted)]'} />
+                                </button>
+                            </div>
                         </div>
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-4">Upcoming ({upcoming.length})</p>
@@ -315,14 +319,13 @@ const RecruiterDashboard = () => {
             case 'Interview Fatigue':
                 return <InterviewFatigueReducer />;
             case 'Auto Rejection':
-                return <AutoRejectionLog />;
+                return <AutoRejectionLog onGoBack={() => setActiveTab('Job Roles')} />;
             default:
                 return null;
         }
     };
 
-    // Show header only for Job Roles and Screening Bot tabs
-    const showHeader = activeTab === 'Job Roles' || activeTab === 'Screening Bot';
+    // Show header (action buttons) only for tabs that need it - removed as buttons are now inline in each component
 
     return (
         <DashboardShell
@@ -331,44 +334,6 @@ const RecruiterDashboard = () => {
             navigation={recruiterNav}
             onProfileClick={() => { }}
         >
-            {showHeader && (
-                <>
-                    {/* Hero Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                        {[
-                            { label: 'Total Pool', value: stats.totalPool, icon: Users, color: 'bg-indigo-600' },
-                            { label: 'Top Matches', value: stats.topMatches, icon: Target, color: 'bg-emerald-500' },
-                            { label: 'Open Roles', value: stats.openRoles, icon: PlusCircle, color: 'bg-slate-800' },
-                        ].map((stat, i) => (
-                            <div key={i} className="glass-card p-8 rounded-[2rem] flex items-center gap-6">
-                                <div className={`w-16 h-16 rounded-[1.5rem] ${stat.color} flex items-center justify-center shadow-lg`}>
-                                    <stat.icon size={28} className="text-white" />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-black text-[var(--text-secondary)] uppercase tracking-widest mb-1">{stat.label}</p>
-                                    <h4 className="text-3xl font-black">{stat.value}</h4>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="flex justify-end mb-10 gap-4">
-                        <button
-                            onClick={() => setActiveTab('Screening Bot')}
-                            className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20"
-                        >
-                            <Bot size={18} /> Screening Bot
-                        </button>
-                        <button
-                            onClick={() => setIsJobModalOpen(true)}
-                            className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20"
-                        >
-                            <PlusCircle size={18} /> Post Job Role
-                        </button>
-                    </div>
-                </>
-            )}
-
             {renderMainContent()}
 
             <JobModal

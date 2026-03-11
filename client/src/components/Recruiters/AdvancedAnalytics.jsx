@@ -120,27 +120,33 @@ const AdvancedAnalytics = () => {
                             </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            {skillGap.length > 0 ? skillGap.slice(0, 4).map((s, i) => (
-                                <div key={i} className="p-5 bg-[var(--bg-accent)] rounded-2xl border border-[var(--border-primary)]">
-                                    <h4 className="text-sm font-black mb-3">{s.SkillName}</h4>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-[9px] font-black uppercase">
-                                            <span className="text-[var(--text-muted)]">Demand</span>
-                                            <span className="text-rose-500">{s.DemandScore}%</span>
+                            {skillGap.length > 0 ? (
+                                (() => {
+                                    // Filter out skills with zero demand and supply, then take first 8
+                                    const filteredSkills = skillGap.filter(s => s.DemandScore > 0 || s.SupplyScore > 0).slice(0, 8);
+                                    return filteredSkills.length > 0 ? filteredSkills.map((s, i) => (
+                                        <div key={i} className="p-5 bg-[var(--bg-accent)] rounded-2xl border border-[var(--border-primary)]">
+                                            <h4 className="text-sm font-black mb-3">{s.SkillName}</h4>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-[9px] font-black uppercase">
+                                                    <span className="text-[var(--text-muted)]">Demand</span>
+                                                    <span className="text-rose-500">{s.DemandScore}%</span>
+                                                </div>
+                                                <div className="w-full h-1.5 bg-[var(--border-primary)] rounded-full">
+                                                    <div className="h-full bg-rose-500 rounded-full" style={{ width: `${s.DemandScore}%` }}></div>
+                                                </div>
+                                                <div className="flex justify-between text-[9px] font-black uppercase">
+                                                    <span className="text-[var(--text-muted)]">Supply</span>
+                                                    <span className="text-emerald-500">{s.SupplyScore}%</span>
+                                                </div>
+                                                <div className="w-full h-1.5 bg-[var(--border-primary)] rounded-full">
+                                                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${s.SupplyScore}%` }}></div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="w-full h-1.5 bg-[var(--border-primary)] rounded-full">
-                                            <div className="h-full bg-rose-500 rounded-full" style={{ width: `${s.DemandScore}%` }}></div>
-                                        </div>
-                                        <div className="flex justify-between text-[9px] font-black uppercase">
-                                            <span className="text-[var(--text-muted)]">Supply</span>
-                                            <span className="text-emerald-500">{s.SupplyScore}%</span>
-                                        </div>
-                                        <div className="w-full h-1.5 bg-[var(--border-primary)] rounded-full">
-                                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${s.SupplyScore}%` }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )) : (
+                                    )) : null;
+                                })()
+                            ) : (
                                 <>
                                     {['React', 'Node.js', 'AWS', 'Python'].map((skill, i) => (
                                         <div key={i} className="p-5 bg-[var(--bg-accent)] rounded-2xl border border-[var(--border-primary)]">

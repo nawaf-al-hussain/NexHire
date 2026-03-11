@@ -19,7 +19,8 @@
     "msnodesqlv8": "^5.1.5",
     "mssql": "^12.2.0",
     "multer": "^2.0.2",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^2.4.5",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.13"

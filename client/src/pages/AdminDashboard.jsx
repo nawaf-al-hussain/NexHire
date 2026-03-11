@@ -5,7 +5,7 @@ import {
     LayoutDashboard, BarChart3, ShieldAlert, FileText, Database, Activity,
     RefreshCw, Layers, HardDrive, Trash2, UserX, Users, CheckCircle, XCircle,
     Briefcase, Shield, Award, ChevronRight, AlertCircle, AlertTriangle, Check, Target, Zap, TrendingUp,
-    Globe, PieChart, DollarSign, MapPin, GitBranch, UsersRound, Mail
+    Globe, PieChart, DollarSign, MapPin, GitBranch, UsersRound, Mail, UserPlus, X
 } from 'lucide-react';
 import DashboardShell from '../components/DashboardShell';
 import RecruiterPerformanceAdmin from '../components/Admin/RecruiterPerformanceAdmin';
@@ -30,9 +30,18 @@ import ReferralIntelligence from '../components/Recruiters/ReferralIntelligence'
 import DiversityGoals from '../components/Admin/DiversityGoals';
 import BiasLogs from '../components/Admin/BiasLogs';
 import EmailQueueManager from '../components/Admin/EmailQueueManager';
+import SQLViews from '../components/Admin/SQLViews';
 
 const AdminDashboard = () => {
     const [activeView, setActiveView] = React.useState('Core Analytics');
+    const [marketIntelKey, setMarketIntelKey] = React.useState(0);
+
+    // Reset animation key when switching to Market Intel tab
+    React.useEffect(() => {
+        if (activeView === 'Market Intel') {
+            setMarketIntelKey(prev => prev + 1);
+        }
+    }, [activeView]);
     const [archiveStats, setArchiveStats] = React.useState({ archivedJobs: 0, archivedApplications: 0, lastUpdated: null });
     const [archivedJobsData, setArchivedJobsData] = React.useState([]);
     const [archivedAppsData, setArchivedAppsData] = React.useState([]);
@@ -43,6 +52,18 @@ const AdminDashboard = () => {
     const [auditLogsLoading, setAuditLogsLoading] = React.useState(false);
     const [systemStats, setSystemStats] = React.useState(null);
     const [systemStatsLoading, setSystemStatsLoading] = React.useState(false);
+
+    // Create Candidate Modal state
+    const [showCreateCandidateModal, setShowCreateCandidateModal] = React.useState(false);
+    const [isCreatingCandidate, setIsCreatingCandidate] = React.useState(false);
+    const [newCandidate, setNewCandidate] = React.useState({
+        username: '',
+        email: '',
+        password: '',
+        fullName: '',
+        location: '',
+        yearsOfExperience: ''
+    });
 
     // Analytics state variables
     const [analyticsLoading, setAnalyticsLoading] = React.useState(false);
@@ -349,7 +370,7 @@ const AdminDashboard = () => {
         } else if (activeView === 'Core Analytics') {
             fetchAnalytics();
             fetchPhase1Analytics();
-        } else if (['Market Intel', 'Salary Transp', 'Remote Work', 'Career Path', 'Referral Intel'].includes(activeView)) {
+        } else if (['Market Intel', 'Salary Transp', 'Remote Work', 'Career Path', 'Referral Intelligence'].includes(activeView)) {
             fetchAdvancedAnalytics();
         }
     }, [activeView]);
@@ -387,30 +408,99 @@ const AdminDashboard = () => {
         }
     };
 
+    // Create candidate handler
+    const handleCreateCandidate = async (e) => {
+        e.preventDefault();
+        if (!newCandidate.username || !newCandidate.email || !newCandidate.password || !newCandidate.fullName) {
+            alert("Please fill in all required fields (username, email, password, full name).");
+            return;
+        }
+
+        setIsCreatingCandidate(true);
+        try {
+            console.log("Creating candidate with data:", {
+                username: newCandidate.username,
+                email: newCandidate.email,
+                password: "***",
+                fullName: newCandidate.fullName,
+                location: newCandidate.location || null,
+                yearsOfExperience: newCandidate.yearsOfExperience ? parseInt(newCandidate.yearsOfExperience) : null
+            });
+
+            const response = await axios.post(`${API_BASE}/users/candidate`, {
+                username: newCandidate.username,
+                email: newCandidate.email,
+                password: newCandidate.password,
+                fullName: newCandidate.fullName,
+                location: newCandidate.location || null,
+                yearsOfExperience: newCandidate.yearsOfExperience ? parseInt(newCandidate.yearsOfExperience) : null
+            });
+
+            console.log("Create candidate response:", response.data);
+            alert("Candidate created successfully!");
+            setShowCreateCandidateModal(false);
+            setNewCandidate({
+                username: '',
+                email: '',
+                password: '',
+                fullName: '',
+                location: '',
+                yearsOfExperience: ''
+            });
+            fetchUsers();
+            fetchSystemStats();
+        } catch (err) {
+            console.error("Create candidate error:", err.response?.data || err.message);
+            alert("Failed to create candidate: " + (err.response?.data?.error || err.message));
+        } finally {
+            setIsCreatingCandidate(false);
+        }
+    };
+
     const adminNav = [
+        // Tier 1 - Analytics & Insights
         { icon: LayoutDashboard, label: 'Core Analytics', active: activeView === 'Core Analytics', onClick: () => setActiveView('Core Analytics') },
         { icon: Globe, label: 'Market Intel', active: activeView === 'Market Intel', onClick: () => setActiveView('Market Intel') },
         { icon: DollarSign, label: 'Salary Transp', active: activeView === 'Salary Transp', onClick: () => setActiveView('Salary Transp') },
         { icon: MapPin, label: 'Remote Work', active: activeView === 'Remote Work', onClick: () => setActiveView('Remote Work') },
         { icon: GitBranch, label: 'Career Path', active: activeView === 'Career Path', onClick: () => setActiveView('Career Path') },
-        { icon: Users, label: 'Referral Intel', active: activeView === 'Referral Intel', onClick: () => setActiveView('Referral Intel') },
-        { icon: BarChart3, label: 'System Reports', active: activeView === 'System Reports', onClick: () => setActiveView('System Reports') },
-        { icon: ShieldAlert, label: 'Security Logs', active: activeView === 'Security Logs', onClick: () => setActiveView('Security Logs') },
-        { icon: Layers, label: 'SQL Views', active: activeView === 'SQL Views', onClick: () => setActiveView('SQL Views') },
-        { icon: Database, label: 'Maintenance', active: activeView === 'Maintenance', onClick: () => setActiveView('Maintenance') },
+
+        // Tier 2 - People & Performance
         { icon: Award, label: 'Recruiter Perf', active: activeView === 'Recruiter Perf', onClick: () => setActiveView('Recruiter Perf') },
-        { icon: Shield, label: 'Consent Mgmt', active: activeView === 'Consent Mgmt', onClick: () => setActiveView('Consent Mgmt') },
-        { icon: Briefcase, label: 'Vacancy Util', active: activeView === 'Vacancy Util', onClick: () => setActiveView('Vacancy Util') },
+        { icon: Users, label: 'Referral Intelligence', active: activeView === 'Referral Intelligence', onClick: () => setActiveView('Referral Intelligence') },
         { icon: Target, label: 'Diversity Goals', active: activeView === 'Diversity Goals', onClick: () => setActiveView('Diversity Goals') },
         { icon: AlertTriangle, label: 'Bias Logs', active: activeView === 'Bias Logs', onClick: () => setActiveView('Bias Logs') },
+
+        // Tier 3 - System & Compliance
+        { icon: BarChart3, label: 'System Reports', active: activeView === 'System Reports', onClick: () => setActiveView('System Reports') },
+        { icon: ShieldAlert, label: 'Security Logs', active: activeView === 'Security Logs', onClick: () => setActiveView('Security Logs') },
+        { icon: Shield, label: 'Consent Mgmt', active: activeView === 'Consent Mgmt', onClick: () => setActiveView('Consent Mgmt') },
+
+        // Tier 4 - Operations & Maintenance
+        { icon: Briefcase, label: 'Vacancy Util', active: activeView === 'Vacancy Util', onClick: () => setActiveView('Vacancy Util') },
         { icon: Mail, label: 'Email Queue', active: activeView === 'Email Queue', onClick: () => setActiveView('Email Queue') },
+        { icon: Database, label: 'Maintenance', active: activeView === 'Maintenance', onClick: () => setActiveView('Maintenance') },
+        { icon: Layers, label: 'SQL Views', active: activeView === 'SQL Views', onClick: () => setActiveView('SQL Views') },
     ];
 
     const renderAdminContent = () => {
         switch (activeView) {
             case 'Core Analytics':
                 return (
-                    <div className="space-y-8">
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        {/* Gradient Header */}
+                        <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 border border-indigo-500/20">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                    <BarChart3 size={28} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black uppercase tracking-tight">Core Analytics</h2>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Recruitment performance insights</p>
+                                </div>
+                            </div>
+                        </div>
+
                         {analyticsLoading && (
                             <div className="flex items-center justify-center py-20">
                                 <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
@@ -485,21 +575,6 @@ const AdminDashboard = () => {
                                         <div className="text-center py-8 text-xs font-black text-[var(--text-muted)] opacity-50 uppercase tracking-widest">No recruiter data</div>
                                     )}
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* === VACANCY UTILIZATION === */}
-                        <div className="glass-card p-8 rounded-[2.5rem]">
-                            <div className="flex items-center gap-3 mb-6">
-                                <Briefcase className="w-5 h-5 text-blue-500" />
-                                <h3 className="text-sm font-black uppercase tracking-widest">Vacancy Utilization</h3>
-                            </div>
-                            <div className="mt-4">
-                                {vacancyData.length > 0 ? (
-                                    <VacancyUtilizationChart data={vacancyData} />
-                                ) : (
-                                    <div className="col-span-3 text-center py-8 text-xs font-black text-[var(--text-muted)] opacity-50 uppercase tracking-widest">No vacancy data</div>
-                                )}
                             </div>
                         </div>
 
@@ -736,7 +811,20 @@ const AdminDashboard = () => {
                 );
             case 'Maintenance':
                 return (
-                    <div className="space-y-8">
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        {/* Gradient Header */}
+                        <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-amber-500/5 to-orange-500/5 border border-amber-500/20">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                                    <HardDrive size={28} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black uppercase tracking-tight">Maintenance</h2>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">System configuration and archive management</p>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Archive Engine Meta */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="glass-card p-10 rounded-[3rem] relative overflow-hidden group">
@@ -962,7 +1050,20 @@ const AdminDashboard = () => {
                 );
             case 'System Reports':
                 return (
-                    <div className="space-y-8">
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        {/* Gradient Header */}
+                        <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-slate-500/5 to-blue-500/5 border border-slate-500/20">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-slate-500/10 flex items-center justify-center text-slate-500">
+                                    <BarChart3 size={28} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black uppercase tracking-tight">System Reports</h2>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Platform performance and user analytics</p>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Recruitment Stats */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="glass-card p-8 rounded-[2.5rem]">
@@ -1021,9 +1122,18 @@ const AdminDashboard = () => {
                                 <h3 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
                                     <Users size={24} className="text-indigo-500" /> User Directory
                                 </h3>
-                                <button onClick={() => { fetchSystemStats(); fetchUsers(); }} className="p-3 bg-[var(--bg-accent)] rounded-xl hover:bg-[var(--border-primary)] transition-all">
-                                    <RefreshCw size={16} className={systemStatsLoading ? 'animate-spin' : ''} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setShowCreateCandidateModal(true)}
+                                        className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-500 transition-all flex items-center gap-2"
+                                    >
+                                        <UserPlus size={16} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Create Candidate</span>
+                                    </button>
+                                    <button onClick={() => { fetchSystemStats(); fetchUsers(); }} className="p-3 bg-[var(--bg-accent)] rounded-xl hover:bg-[var(--border-primary)] transition-all">
+                                        <RefreshCw size={16} className={systemStatsLoading ? 'animate-spin' : ''} />
+                                    </button>
+                                </div>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
@@ -1070,68 +1180,71 @@ const AdminDashboard = () => {
                 );
             case 'Security Logs':
                 return (
-                    <div className="glass-card rounded-[3rem] p-10 relative overflow-hidden">
-                        <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
-                                <ShieldAlert size={24} className="text-orange-500" /> Security Audit Trail
-                            </h3>
-                            <button onClick={fetchAuditLogs} className="p-3 bg-[var(--bg-accent)] rounded-xl hover:bg-[var(--border-primary)] transition-all">
-                                <RefreshCw size={16} className={auditLogsLoading ? 'animate-spin' : ''} />
-                            </button>
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        {/* Gradient Header */}
+                        <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-rose-500/5 to-orange-500/5 border border-rose-500/20">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500">
+                                    <ShieldAlert size={28} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black uppercase tracking-tight">Security Logs</h2>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Platform audit trail and security events</p>
+                                </div>
+                            </div>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-[var(--border-primary)]">
-                                        <th className="py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Time</th>
-                                        <th className="py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Event Details</th>
-                                        <th className="py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Target</th>
-                                        <th className="py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] flex justify-end">Executed By</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {auditLogs.length > 0 ? auditLogs.map((log) => (
-                                        <tr key={log.AuditID} className="border-b border-[var(--border-primary)]/30 hover:bg-white/5 transition-colors">
-                                            <td className="py-4 text-xs font-mono opacity-60">
-                                                {new Date(log.ChangedAt).toLocaleString()}
-                                            </td>
-                                            <td className="py-4">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black tracking-widest uppercase ${log.Operation === 'UPDATE' ? 'bg-orange-500/10 text-orange-500' : log.Operation === 'INSERT' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{log.Operation}</span>
-                                                </div>
-                                                <div className="text-[10px] font-mono opacity-60 mt-2 truncate max-w-xs">{log.OldValue} → {log.NewValue}</div>
-                                            </td>
-                                            <td className="py-4 text-xs font-bold">
-                                                {log.TableName} <span className="text-[var(--text-muted)]">#{log.RecordID}</span>
-                                            </td>
-                                            <td className="py-4 flex justify-end font-mono text-xs text-indigo-400">
-                                                @{log.ChangedBy || 'SYSTEM_CLR'}
-                                            </td>
+
+                        <div className="glass-card rounded-[3rem] p-10 relative overflow-hidden">
+                            <div className="flex items-center justify-between mb-8">
+                                <h3 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
+                                    <ShieldAlert size={24} className="text-orange-500" /> Security Audit Trail
+                                </h3>
+                                <button onClick={fetchAuditLogs} className="p-3 bg-[var(--bg-accent)] rounded-xl hover:bg-[var(--border-primary)] transition-all">
+                                    <RefreshCw size={16} className={auditLogsLoading ? 'animate-spin' : ''} />
+                                </button>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-[var(--border-primary)]">
+                                            <th className="py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Time</th>
+                                            <th className="py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Event Details</th>
+                                            <th className="py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Target</th>
+                                            <th className="py-4 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] flex justify-end">Executed By</th>
                                         </tr>
-                                    )) : (
-                                        <tr>
-                                            <td colSpan={4} className="py-20 text-center opacity-40 italic font-black uppercase tracking-widest text-[10px]">No audit footprint detected</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {auditLogs.length > 0 ? auditLogs.map((log) => (
+                                            <tr key={log.AuditID} className="border-b border-[var(--border-primary)]/30 hover:bg-white/5 transition-colors">
+                                                <td className="py-4 text-xs font-mono opacity-60">
+                                                    {new Date(log.ChangedAt).toLocaleString()}
+                                                </td>
+                                                <td className="py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black tracking-widest uppercase ${log.Operation === 'UPDATE' ? 'bg-orange-500/10 text-orange-500' : log.Operation === 'INSERT' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{log.Operation}</span>
+                                                    </div>
+                                                    <div className="text-[10px] font-mono opacity-60 mt-2 truncate max-w-xs">{log.OldValue} → {log.NewValue}</div>
+                                                </td>
+                                                <td className="py-4 text-xs font-bold">
+                                                    {log.TableName} <span className="text-[var(--text-muted)]">#{log.RecordID}</span>
+                                                </td>
+                                                <td className="py-4 flex justify-end font-mono text-xs text-indigo-400">
+                                                    @{log.ChangedBy || 'SYSTEM_CLR'}
+                                                </td>
+                                            </tr>
+                                        )) : (
+                                            <tr>
+                                                <td colSpan={4} className="py-20 text-center opacity-40 italic font-black uppercase tracking-widest text-[10px]">No audit footprint detected</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 );
             case 'SQL Views':
-                return (
-                    <div className="glass-card rounded-[3rem] p-24 text-center flex flex-col items-center justify-center min-h-[500px]">
-                        <div className="w-24 h-24 rounded-[2.5rem] bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-center mb-8 relative">
-                            <Database className="text-indigo-500/30" size={40} />
-                            <RefreshCw className="text-indigo-500 absolute animate-spin-slow" size={48} />
-                        </div>
-                        <h2 className="text-3xl font-black uppercase tracking-tighter mb-4">{activeView} Synchronizing</h2>
-                        <p className="text-[var(--text-muted)] font-bold uppercase tracking-[0.2em] text-[11px] max-w-lg mx-auto leading-relaxed border-t border-[var(--border-primary)] pt-6 mt-2 opacity-60">
-                            Establishing secure tunnel to production database node...
-                            Indexing distributed T-SQL views for real-time aggregation.
-                        </p>
-                    </div>
-                );
+                return <SQLViews />;
             case 'Recruiter Perf':
                 return <RecruiterPerformanceAdmin />;
             case 'Consent Mgmt':
@@ -1147,173 +1260,252 @@ const AdminDashboard = () => {
                 const risingSkills = marketData.filter(item => item.SalaryTrend === 'Rising').length;
 
                 return (
-                    <div className="space-y-8">
-                        {analyticsLoading && (
-                            <div className="flex items-center justify-center py-20">
-                                <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
-                                <span className="ml-3 text-sm font-black uppercase tracking-widest text-[var(--text-muted)]">Loading Market Data...</span>
+                    <div key={`market-intel-${marketIntelKey}`} className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 border border-blue-500/20">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                                    <Globe size={28} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black uppercase tracking-tight">Market Intelligence</h2>
+                                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Analyze market trends and skill demand patterns</p>
+                                </div>
                             </div>
-                        )}
+                        </div>
 
-                        {/* Summary Stats */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <div className="glass-card p-6 rounded-[2rem] border border-indigo-500/20">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Globe className="w-4 h-4 text-indigo-500" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div className="glass-card rounded-[2rem] p-6 border border-indigo-500/20">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <Globe size={18} className="text-indigo-500" />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Skills Tracked</span>
                                 </div>
                                 <div className="text-3xl font-black">{totalSkills}</div>
-                                <p className="text-[9px] text-[var(--text-muted)]">In market intelligence</p>
+                                <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Market intelligence</p>
                             </div>
-                            <div className="glass-card p-6 rounded-[2rem] border border-emerald-500/20">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <DollarSign className="w-4 h-4 text-emerald-500" />
+                            <div className="glass-card rounded-[2rem] p-6 border border-emerald-500/20">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <DollarSign size={18} className="text-emerald-500" />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Avg Salary</span>
                                 </div>
                                 <div className="text-3xl font-black">${(avgSalary / 1000).toFixed(0)}k</div>
-                                <p className="text-[9px] text-[var(--text-muted)]">Average market rate</p>
+                                <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Market rate</p>
                             </div>
-                            <div className="glass-card p-6 rounded-[2rem] border border-red-500/20">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <TrendingUp className="w-4 h-4 text-red-500" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-red-500">Shortage</span>
+                            <div className="glass-card rounded-[2rem] p-6 border border-rose-500/20">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <TrendingUp size={18} className="text-rose-500" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">Critical Shortage</span>
                                 </div>
-                                <div className="text-3xl font-black text-red-500">{shortageCount}</div>
-                                <p className="text-[9px] text-[var(--text-muted)]">High demand skills</p>
+                                <div className="text-3xl font-black text-rose-500">{shortageCount}</div>
+                                <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">High demand skills</p>
                             </div>
-                            <div className="glass-card p-6 rounded-[2rem] border border-blue-500/20">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Zap className="w-4 h-4 text-amber-500" />
+                            <div className="glass-card rounded-[2rem] p-6 border border-amber-500/20">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <Zap size={18} className="text-amber-500" />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">Rising Salaries</span>
                                 </div>
                                 <div className="text-3xl font-black text-amber-500">{risingSkills}</div>
-                                <p className="text-[9px] text-[var(--text-muted)]">Skills with rising pay</p>
+                                <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Increasing pay</p>
                             </div>
                         </div>
 
-                        {/* Charts Section */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {/* Demand vs Supply Chart */}
-                            <div className="glass-card p-8 rounded-[2.5rem]">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <TrendingUp className="w-5 h-5 text-red-500" />
-                                    <h3 className="text-sm font-black uppercase tracking-widest">Demand vs Supply Analysis</h3>
-                                </div>
-                                <div className="mt-4">
-                                    {marketData.length > 0 ? (
-                                        <MarketIntelligenceChart data={marketData} type="demand-supply" />
-                                    ) : (
-                                        <div className="text-center py-8 text-xs font-black text-[var(--text-muted)] opacity-50 uppercase tracking-widest">
-                                            No data available
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                            {/* Market Overview */}
+                            <div className="glass-card rounded-[3rem] p-8">
+                                <h3 className="text-lg font-black uppercase tracking-tight mb-6">Market Overview</h3>
 
-                            {/* Market Conditions Distribution */}
-                            <div className="glass-card p-8 rounded-[2.5rem]">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <PieChart className="w-5 h-5 text-violet-500" />
-                                    <h3 className="text-sm font-black uppercase tracking-widest">Market Conditions</h3>
-                                </div>
-                                <div className="mt-4">
-                                    {marketData.length > 0 ? (
-                                        <MarketIntelligenceChart data={marketData} type="conditions" />
-                                    ) : (
-                                        <div className="text-center py-8 text-xs font-black text-[var(--text-muted)] opacity-50 uppercase tracking-widest">
-                                            No data available
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                                {marketData.length > 0 ? (
+                                    <div className="space-y-6">
+                                        {/* Market Conditions Summary */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="p-6 bg-[var(--bg-accent)] rounded-xl border border-[var(--border-primary)]">
+                                                <h4 className="text-sm font-black uppercase tracking-widest text-red-500 mb-4 flex items-center gap-2">
+                                                    <AlertCircle size={16} /> Critical Shortages
+                                                </h4>
+                                                <div className="space-y-3">
+                                                    {marketData.filter(item => item.MarketCondition === 'Critical Shortage').slice(0, 4).map((item, i) => (
+                                                        <div key={i} className="flex items-center justify-between">
+                                                            <span className="text-sm font-black">{item.SkillName}</span>
+                                                            <span className="text-sm font-black text-red-500">{item.DemandScore}</span>
+                                                        </div>
+                                                    ))}
+                                                    {marketData.filter(item => item.MarketCondition === 'Critical Shortage').length === 0 && (
+                                                        <div className="text-center text-emerald-500 font-black">No critical shortages</div>
+                                                    )}
+                                                </div>
+                                            </div>
 
-                        {/* Skill Cards Grid */}
-                        <div className="glass-card p-8 rounded-[2.5rem]">
-                            <div className="flex items-center gap-3 mb-6">
-                                <Globe className="w-5 h-5 text-indigo-500" />
-                                <h3 className="text-sm font-black uppercase tracking-widest">Skill Details</h3>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {marketData.length > 0 ? marketData.map((item, idx) => (
-                                    <div key={idx} className="p-6 bg-[var(--bg-accent)] rounded-2xl border border-[var(--border-primary)]">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div className="text-xs font-black">{item.SkillName || 'Unknown Skill'}</div>
-                                            <div className={`text-[10px] font-black px-2 py-1 rounded-full ${item.MarketCondition === 'Critical Shortage' ? 'bg-red-500/20 text-red-400' :
-                                                item.MarketCondition === 'High Demand' ? 'bg-orange-500/20 text-orange-400' :
-                                                    item.MarketCondition === 'Oversupply' ? 'bg-green-500/20 text-green-400' :
-                                                        'bg-blue-500/20 text-blue-400'
-                                                }`}>
-                                                {item.MarketCondition || 'Balanced'}
-                                            </div>
-                                        </div>
-                                        <div className="text-[10px] text-[var(--text-muted)] mb-3">{item.Location || 'Global'}</div>
-                                        <div className="flex gap-4 mb-3">
-                                            <div className="flex-1">
-                                                <div className="text-[10px] text-[var(--text-muted)] uppercase">Demand</div>
-                                                <div className="text-lg font-black text-red-400">{item.DemandScore ?? '-'}</div>
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="text-[10px] text-[var(--text-muted)] uppercase">Supply</div>
-                                                <div className="text-lg font-black text-green-400">{item.SupplyScore ?? '-'}</div>
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="text-[10px] text-[var(--text-muted)] uppercase">Gap</div>
-                                                <div className={`text-lg font-black ${(item.ImbalanceScore ?? 0) > 0 ? 'text-orange-400' : 'text-blue-400'}`}>
-                                                    {item.ImbalanceScore ?? '-'}
+                                            <div className="p-6 bg-[var(--bg-accent)] rounded-xl border border-[var(--border-primary)]">
+                                                <h4 className="text-sm font-black uppercase tracking-widest text-emerald-500 mb-4 flex items-center gap-2">
+                                                    <TrendingUp size={16} /> Oversupply
+                                                </h4>
+                                                <div className="space-y-3">
+                                                    {marketData.filter(item => item.MarketCondition === 'Oversupply').slice(0, 4).map((item, i) => (
+                                                        <div key={i} className="flex items-center justify-between">
+                                                            <span className="text-sm font-black">{item.SkillName}</span>
+                                                            <span className="text-sm font-black text-emerald-500">{item.SupplyScore}</span>
+                                                        </div>
+                                                    ))}
+                                                    {marketData.filter(item => item.MarketCondition === 'Oversupply').length === 0 && (
+                                                        <div className="text-center text-emerald-500 font-black">No oversupply detected</div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
-                                            <span className={`flex items-center gap-1 ${item.SalaryTrend === 'Rising' ? 'text-green-400' :
-                                                item.SalaryTrend === 'Falling' ? 'text-red-400' :
-                                                    'text-[var(--text-muted)]'
-                                                }`}>
-                                                <TrendingUp className="w-3 h-3" />
-                                                {item.SalaryTrend || 'Stable'}
-                                            </span>
-                                            <span>Fill: {item.TimeToFillDays ? `${item.TimeToFillDays}d` : '-'}</span>
-                                            <span className={`${item.HiringDifficulty === 'Very Difficult' ? 'text-red-400' :
-                                                item.HiringDifficulty === 'Difficult' ? 'text-orange-400' :
-                                                    'text-green-400'
-                                                }`}>
-                                                {item.HiringDifficulty || 'N/A'}
-                                            </span>
+
+                                        {/* Top Skills by Demand */}
+                                        <div className="p-6 bg-[var(--bg-accent)] rounded-xl border border-[var(--border-primary)]">
+                                            <h4 className="text-sm font-black uppercase tracking-widest text-indigo-500 mb-4 flex items-center gap-2">
+                                                <TrendingUp size={16} /> Top Skills by Demand
+                                            </h4>
+                                            <div className="space-y-3">
+                                                {marketData.sort((a, b) => (b.DemandScore || 0) - (a.DemandScore || 0)).slice(0, 5).map((item, i) => (
+                                                    <div key={i} className="flex items-center justify-between">
+                                                        <span className="text-sm font-black">{item.SkillName}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-black text-indigo-500">{item.DemandScore}</span>
+                                                            <div className="w-20 h-2 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                                                                <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min((item.DemandScore / 100) * 100, 100)}%` }} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-                                )) : (
-                                    <div className="col-span-3 text-center py-10 text-xs font-black text-[var(--text-muted)] opacity-50 uppercase tracking-widest">
-                                        No market data available. Connect to database.
+                                ) : (
+                                    <div className="text-center py-12 text-[var(--text-muted)]">
+                                        <Globe className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                                        <p>No market data available yet.</p>
+                                        <p className="text-xs mt-1">Connect to database to see market intelligence insights.</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Market Analysis */}
+                            <div className="glass-card rounded-[3rem] p-8">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-lg font-black uppercase tracking-tight">Market Analysis</h3>
+                                    <button
+                                        onClick={() => { /* Refresh market data */ }}
+                                        className="p-2 hover:bg-[var(--bg-accent)] rounded-xl transition-colors"
+                                        title="Refresh"
+                                    >
+                                        <RefreshCw className="w-5 h-5 text-[var(--text-muted)]" />
+                                    </button>
+                                </div>
+
+                                {marketData.length > 0 ? (
+                                    <div className="space-y-6">
+                                        {/* Demand vs Supply Chart */}
+                                        <div className="p-6 bg-[var(--bg-accent)] rounded-xl border border-[var(--border-primary)]">
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <TrendingUp size={20} className="text-red-500" />
+                                                <h4 className="text-sm font-black uppercase tracking-widest">Demand vs Supply</h4>
+                                            </div>
+                                            <div className="mt-4">
+                                                <MarketIntelligenceChart data={marketData} type="demand-supply" />
+                                            </div>
+                                        </div>
+
+                                        {/* Market Conditions Chart */}
+                                        <div className="p-6 bg-[var(--bg-accent)] rounded-xl border border-[var(--border-primary)]">
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <PieChart size={20} className="text-violet-500" />
+                                                <h4 className="text-sm font-black uppercase tracking-widest">Market Conditions</h4>
+                                            </div>
+                                            <div className="mt-4">
+                                                <MarketIntelligenceChart data={marketData} type="conditions" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-12 text-[var(--text-muted)]">
+                                        <PieChart className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                                        <p>No market analysis data available.</p>
+                                        <p className="text-xs mt-1">Connect to database to see market trends.</p>
                                     </div>
                                 )}
                             </div>
                         </div>
-                    </div>
-                );
-            case 'Diversity':
-                return (
-                    <div className="space-y-8">
-                        {analyticsLoading && (
-                            <div className="flex items-center justify-center py-20">
-                                <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
-                                <span className="ml-3 text-sm font-black uppercase tracking-widest text-[var(--text-muted)]">Loading Diversity Data...</span>
+
+                        {/* Skill Details */}
+                        <div className="glass-card rounded-[3rem] p-8">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-lg font-black uppercase tracking-tight">Skill Details</h3>
+                                <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
+                                    {marketData.length} skills tracked
+                                </span>
+                            </div>
+
+                            {marketData.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {marketData.map((item, idx) => (
+                                        <div key={idx} className="p-6 bg-[var(--bg-accent)] rounded-xl border border-[var(--border-primary)] hover:bg-[var(--bg-accent)]/50 transition-colors">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="text-sm font-black">{item.SkillName || 'Unknown Skill'}</div>
+                                                <div className={`text-[8px] font-black px-2 py-1 rounded-lg border ${item.MarketCondition === 'Critical Shortage' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                                    item.MarketCondition === 'High Demand' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                                                        item.MarketCondition === 'Oversupply' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                                            'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                                                    }`}>
+                                                    {item.MarketCondition || 'Balanced'}
+                                                </div>
+                                            </div>
+                                            <div className="text-[10px] text-[var(--text-muted)] mb-4">{item.Location || 'Global'}</div>
+
+                                            <div className="space-y-3 mb-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Demand</span>
+                                                    <span className="text-sm font-black text-red-500">{item.DemandScore ?? '-'}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Supply</span>
+                                                    <span className="text-sm font-black text-emerald-500">{item.SupplyScore ?? '-'}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Gap</span>
+                                                    <span className={`text-sm font-black ${(item.ImbalanceScore ?? 0) > 0 ? 'text-orange-500' : 'text-blue-500'}`}>
+                                                        {item.ImbalanceScore ?? '-'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] pt-3 border-t border-[var(--border-primary)]">
+                                                <span className={`flex items-center gap-1 ${item.SalaryTrend === 'Rising' ? 'text-emerald-500' :
+                                                    item.SalaryTrend === 'Falling' ? 'text-rose-500' :
+                                                        'text-[var(--text-muted)]'
+                                                    }`}>
+                                                    <TrendingUp size={12} />
+                                                    {item.SalaryTrend || 'Stable'}
+                                                </span>
+                                                <span className="text-[10px] font-black">Fill: {item.TimeToFillDays ? `${item.TimeToFillDays}d` : '-'}</span>
+                                                <span className={`text-[10px] font-black ${item.HiringDifficulty === 'Very Difficult' ? 'text-rose-500' :
+                                                    item.HiringDifficulty === 'Difficult' ? 'text-orange-500' :
+                                                        'text-emerald-500'
+                                                    }`}>
+                                                    {item.HiringDifficulty || 'N/A'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 text-[var(--text-muted)]">
+                                    <Globe className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                                    <p>No skill data available yet.</p>
+                                    <p className="text-xs mt-1">Connect to database to see detailed skill analysis.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Empty State */}
+                        {(!marketData || marketData.length === 0) && !analyticsLoading && (
+                            <div className="glass-card rounded-[2.5rem] p-8 text-center">
+                                <Globe className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4 opacity-50" />
+                                <p className="text-[var(--text-muted)]">No market intelligence data available yet.</p>
+                                <p className="text-xs text-[var(--text-muted)] mt-1">Connect to database to see market trends and insights.</p>
                             </div>
                         )}
-                        <div className="glass-card p-8 rounded-[2.5rem]">
-                            <div className="flex items-center gap-3 mb-6">
-                                <UsersRound className="w-5 h-5 text-emerald-500" />
-                                <h3 className="text-sm font-black uppercase tracking-widest">Diversity Analytics Funnel</h3>
-                            </div>
-                            <div className="mt-4">
-                                {diversityData.length > 0 ? (
-                                    <DiversityChart data={diversityData} />
-                                ) : (
-                                    <div className="col-span-2 text-center py-10 text-xs font-black text-[var(--text-muted)] opacity-50 uppercase tracking-widest">
-                                        No diversity data available. Connect to database.
-                                    </div>
-                                )}
-                            </div>
-                        </div>
                     </div>
                 );
             case 'Salary Transp':
@@ -1327,7 +1519,20 @@ const AdminDashboard = () => {
                 );
             case 'Career Path':
                 return (
-                    <div className="space-y-8">
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        {/* Gradient Header */}
+                        <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-violet-500/5 to-purple-500/5 border border-violet-500/20">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-500">
+                                    <GitBranch size={28} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black uppercase tracking-tight">Career Path</h2>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Career transition analytics and growth metrics</p>
+                                </div>
+                            </div>
+                        </div>
+
                         {analyticsLoading && (
                             <div className="flex items-center justify-center py-20">
                                 <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
@@ -1426,7 +1631,7 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 );
-            case 'Referral Intel':
+            case 'Referral Intelligence':
                 return <ReferralIntelligence />;
             case 'Diversity Goals':
                 return <DiversityGoals />;
@@ -1439,6 +1644,165 @@ const AdminDashboard = () => {
         }
     };
 
+    // Render Create Candidate Modal
+    const renderCreateCandidateModal = () => {
+        if (!showCreateCandidateModal) return null;
+
+        return (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 transition-opacity duration-300">
+                {/* Backdrop */}
+                <div
+                    className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+                    onClick={() => setShowCreateCandidateModal(false)}
+                />
+
+                {/* Modal */}
+                <div className="relative bg-[var(--bg-primary)] border border-[var(--border-primary)] w-full max-w-lg overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col text-[var(--text-primary)]">
+                    {/* Header */}
+                    <div className="p-8 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--bg-accent)]/20">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                                <UserPlus className="text-indigo-500" size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black tracking-tight">Create Candidate</h3>
+                                <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-1 italic">Add new candidate to the system</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setShowCreateCandidateModal(false)}
+                            className="p-2 hover:bg-[var(--bg-tertiary)] rounded-xl transition-all"
+                        >
+                            <X size={20} className="text-[var(--text-muted)]" />
+                        </button>
+                    </div>
+
+                    {/* Form */}
+                    <div className="p-8">
+                        <form onSubmit={handleCreateCandidate} className="space-y-6">
+                            {/* Username */}
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3">
+                                    Username <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newCandidate.username}
+                                    onChange={(e) => setNewCandidate({ ...newCandidate, username: e.target.value })}
+                                    className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 transition-all"
+                                    placeholder="Enter username"
+                                    required
+                                />
+                            </div>
+
+                            {/* Email */}
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3">
+                                    Email <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="email"
+                                    value={newCandidate.email}
+                                    onChange={(e) => setNewCandidate({ ...newCandidate, email: e.target.value })}
+                                    className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 transition-all"
+                                    placeholder="Enter email"
+                                    required
+                                />
+                            </div>
+
+                            {/* Password */}
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3">
+                                    Password <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="password"
+                                    value={newCandidate.password}
+                                    onChange={(e) => setNewCandidate({ ...newCandidate, password: e.target.value })}
+                                    className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 transition-all"
+                                    placeholder="Enter password"
+                                    required
+                                />
+                            </div>
+
+                            {/* Full Name */}
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3">
+                                    Full Name <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newCandidate.fullName}
+                                    onChange={(e) => setNewCandidate({ ...newCandidate, fullName: e.target.value })}
+                                    className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 transition-all"
+                                    placeholder="Enter full name"
+                                    required
+                                />
+                            </div>
+
+                            {/* Location */}
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3">
+                                    Location
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newCandidate.location}
+                                    onChange={(e) => setNewCandidate({ ...newCandidate, location: e.target.value })}
+                                    className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 transition-all"
+                                    placeholder="Enter location (optional)"
+                                />
+                            </div>
+
+                            {/* Years of Experience */}
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3">
+                                    Years of Experience
+                                </label>
+                                <input
+                                    type="number"
+                                    value={newCandidate.yearsOfExperience}
+                                    onChange={(e) => setNewCandidate({ ...newCandidate, yearsOfExperience: e.target.value })}
+                                    className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 transition-all"
+                                    placeholder="Enter years of experience (optional)"
+                                    min="0"
+                                />
+                            </div>
+
+                            {/* Buttons */}
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreateCandidateModal(false)}
+                                    className="flex-1 px-6 py-4 rounded-2xl border border-[var(--border-primary)] text-[var(--text-secondary)] font-black uppercase text-xs tracking-widest hover:bg-[var(--bg-accent)] transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isCreatingCandidate}
+                                    className="flex-1 px-6 py-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-black uppercase text-xs tracking-widest hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {isCreatingCandidate ? (
+                                        <>
+                                            <RefreshCw size={16} className="animate-spin" />
+                                            Creating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle size={16} />
+                                            Create Candidate
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <DashboardShell
             title="Database Intelligence"
@@ -1447,6 +1811,7 @@ const AdminDashboard = () => {
             onProfileClick={() => { }}
         >
             {renderAdminContent()}
+            {renderCreateCandidateModal()}
         </DashboardShell>
     );
 };

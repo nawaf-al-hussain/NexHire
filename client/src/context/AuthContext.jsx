@@ -16,8 +16,8 @@ export const AuthProvider = ({ children }) => {
             const parsedUser = JSON.parse(storedUser);
             setUser(parsedUser);
             // Set global auth headers for development
-            axios.defaults.headers.common['x-user-id'] = parsedUser.UserID;
-            axios.defaults.headers.common['x-user-role'] = parsedUser.RoleID;
+            axios.defaults.headers.common['x-user-id'] = parsedUser.UserID || parsedUser.userid;
+            axios.defaults.headers.common['x-user-role'] = parsedUser.RoleID || parsedUser.roleid;
         } else {
             delete axios.defaults.headers.common['x-user-id'];
             delete axios.defaults.headers.common['x-user-role'];
@@ -31,8 +31,8 @@ export const AuthProvider = ({ children }) => {
         if (loading) return;
 
         if (user) {
-            axios.defaults.headers.common['x-user-id'] = user.UserID;
-            axios.defaults.headers.common['x-user-role'] = user.RoleID;
+            axios.defaults.headers.common['x-user-id'] = user.UserID || user.userid;
+            axios.defaults.headers.common['x-user-role'] = user.RoleID || user.roleid;
         } else {
             delete axios.defaults.headers.common['x-user-id'];
             delete axios.defaults.headers.common['x-user-role'];

@@ -45,7 +45,20 @@ const CandidateEngagement = ({ loading, onRefresh }) => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+            {/* Gradient Header */}
+            <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-emerald-500/5 to-teal-500/5 border border-emerald-500/20">
+                <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                        <Users size={28} />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-black uppercase tracking-tight">Candidate Engagement</h2>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Track candidate interactions</p>
+                    </div>
+                </div>
+            </div>
+
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="glass-card rounded-[2rem] p-6 border border-indigo-500/20">

@@ -24,7 +24,7 @@
 | `AssessmentAttempts` | Test attempt records | `AttemptID`, `CandidateID`, `AssessmentID`, `StartedAt`, `CompletedAt`, `Score`, `TimeSpentSeconds`, `IsPassed`, `Details` |
 | `SkillVerifications` | Verified skills | `VerificationID`, `CandidateID`, `SkillID`, `AssessmentID`, `VerificationMethod`, `VerificationScore`, `VerifiedAt`, `IsVerified` |
 | `SalaryBenchmarks` | Market salary data | `BenchmarkID`, `JobTitle`, `Location`, `ExperienceRange`, `SkillID`, `AvgSalary` |
-| `JobSalaryRanges` | Job-specific pay | `RangeID`, `JobID`, `MinSalary`, `MaxSalary`, `IsTransparent` |
+| **`JobSalaryRanges`** | **Job-specific pay (transparent)** | **`RangeID`, `JobID`, `MinSalary`, `MaxSalary`, `IsTransparent`** |
 | `CandidateGamification` | Gamification data | `GameID`, `CandidateID`, `Points`, `Level`, `Badges`, `StreakDays`, `LeaderboardRank`, `EngagementScore` |
 | `GamificationActions` | Points actions | `ActionID`, `ActionType`, `PointsAwarded`, `BadgeEligible`, `CooldownHours`, `IsActive` |
 | `PersonalizedLearningPaths` | Learning paths | `PathID`, `CandidateID`, `GoalJobID`, `SkillsGapAnalysis`, `ProgressPercentage`, `CurrentPhase` |

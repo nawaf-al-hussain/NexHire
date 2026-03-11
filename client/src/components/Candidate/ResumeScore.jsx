@@ -15,22 +15,32 @@ const ResumeScore = ({ resumeData, loading }) => {
         );
     }
 
-    // Default data if none exists
-    const data = resumeData || {
-        overallScore: 72,
-        factors: [
-            { factor: 'Good length', points: 20 },
-            { factor: 'Skills section complete', points: 30 },
-            { factor: 'Strong experience', points: 25 },
-            { factor: 'Add a professional summary', points: 0 }
-        ]
-    };
+    // Use actual data if available, otherwise show N/A
+    const hasData = resumeData && resumeData.overallScore > 0;
+    const data = hasData ? resumeData : null;
 
     const getScoreColor = (score) => {
         if (score >= 80) return 'text-emerald-500';
         if (score >= 60) return 'text-amber-500';
         return 'text-rose-500';
     };
+
+    // If no data, show empty state
+    if (!data) {
+        return (
+            <div className="space-y-8">
+                <div className="flex items-center gap-3 mb-6">
+                    <FileText className="w-5 h-5 text-indigo-500" />
+                    <h2 className="text-lg font-black uppercase tracking-tighter">Resume Score</h2>
+                </div>
+                <div className="glass-card p-12 rounded-[2.5rem] text-center">
+                    <FileText className="w-16 h-16 text-[var(--text-muted)] mx-auto mb-6 opacity-20" />
+                    <p className="text-sm font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">No Resume Data Available</p>
+                    <p className="text-xs text-[var(--text-muted)] opacity-60">Upload your resume to get an AI-powered analysis</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8">
@@ -52,7 +62,7 @@ const ResumeScore = ({ resumeData, loading }) => {
                 <div className="w-full h-6 bg-[var(--bg-accent)] rounded-full overflow-hidden mb-6">
                     <div
                         className={`h-full transition-all duration-1000 ${data.overallScore >= 80 ? 'bg-emerald-500' :
-                                data.overallScore >= 60 ? 'bg-amber-500' : 'bg-rose-500'
+                            data.overallScore >= 60 ? 'bg-amber-500' : 'bg-rose-500'
                             }`}
                         style={{ width: `${data.overallScore}%` }}
                     ></div>

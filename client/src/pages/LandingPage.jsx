@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Briefcase, ShieldCheck, Users, Zap, Globe, Cpu } from 'lucide-react';
+import { ArrowRight, Briefcase, ShieldCheck, Users, Zap, Globe, Cpu, Palette } from 'lucide-react';
 import NexHireLogo from '../assets/nexhire_logo.svg';
 
 const LandingPage = () => {
@@ -25,6 +25,9 @@ const LandingPage = () => {
                     <a href="#" className="hover:text-indigo-500 transition-colors">Architecture</a>
                     <a href="#" className="hover:text-indigo-500 transition-colors">SQL View</a>
                     <a href="#" className="hover:text-indigo-500 transition-colors">Stored Procs</a>
+                    <Link to="/design-system" className="flex items-center gap-2 hover:text-indigo-500 transition-colors">
+                        <Palette size={16} /> Design System
+                    </Link>
                 </div>
 
                 <Link

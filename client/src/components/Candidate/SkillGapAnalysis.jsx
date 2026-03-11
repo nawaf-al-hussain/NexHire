@@ -130,27 +130,30 @@ const SkillGapAnalysis = ({ skillGaps: initialSkillGaps, loading: initialLoading
             {activeTab === 'gaps' ? (
                 <>
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="p-5 bg-rose-500/10 rounded-2xl border border-rose-500/20">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="glass-card rounded-[2rem] p-6 border border-rose-500/20">
                             <div className="flex items-center gap-3 mb-2">
-                                <AlertTriangle className="w-5 h-5 text-rose-500" />
-                                <span className="text-xs font-black text-rose-500 uppercase">Critical Gaps</span>
+                                <AlertTriangle size={18} className="text-rose-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">Critical Gaps</span>
                             </div>
-                            <p className="text-3xl font-black">{criticalGaps.length}</p>
+                            <div className="text-3xl font-black">{criticalGaps.length}</div>
+                            <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Need Attention</p>
                         </div>
-                        <div className="p-5 bg-amber-500/10 rounded-2xl border border-amber-500/20">
+                        <div className="glass-card rounded-[2rem] p-6 border border-amber-500/20">
                             <div className="flex items-center gap-3 mb-2">
-                                <BookOpen className="w-5 h-5 text-amber-500" />
-                                <span className="text-xs font-black text-amber-500 uppercase">Learning Ops</span>
+                                <BookOpen size={18} className="text-amber-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">Learning Ops</span>
                             </div>
-                            <p className="text-3xl font-black">{learningOpportunities.length}</p>
+                            <div className="text-3xl font-black">{learningOpportunities.length}</div>
+                            <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Available</p>
                         </div>
-                        <div className="p-5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+                        <div className="glass-card rounded-[2rem] p-6 border border-emerald-500/20">
                             <div className="flex items-center gap-3 mb-2">
-                                <CheckCircle className="w-5 h-5 text-emerald-500" />
-                                <span className="text-xs font-black text-emerald-500 uppercase">Adequate</span>
+                                <CheckCircle size={18} className="text-emerald-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Adequate</span>
                             </div>
-                            <p className="text-3xl font-black">{adequateSkills.length}</p>
+                            <div className="text-3xl font-black">{adequateSkills.length}</div>
+                            <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Skills Strong</p>
                         </div>
                     </div>
 
@@ -169,7 +172,7 @@ const SkillGapAnalysis = ({ skillGaps: initialSkillGaps, loading: initialLoading
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             {skillGaps.map((skill, index) => (
                                 <div
-                                    key={skill.SkillID}
+                                    key={`${skill.SkillID}-${index}`}
                                     className="glass-card p-8 rounded-[2.5rem] hover:border-indigo-500/30 transition-all group"
                                 >
                                     <div className="flex items-start justify-between mb-6">
@@ -243,22 +246,24 @@ const SkillGapAnalysis = ({ skillGaps: initialSkillGaps, loading: initialLoading
             ) : (
                 <>
                     {/* Market Demand View */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-5 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="glass-card rounded-[2rem] p-6 border border-indigo-500/20">
                             <div className="flex items-center gap-3 mb-2">
-                                <TrendingUp className="w-5 h-5 text-indigo-500" />
-                                <span className="text-xs font-black text-indigo-500 uppercase">Highest Demand</span>
+                                <TrendingUp size={18} className="text-indigo-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Highest Demand</span>
                             </div>
-                            <p className="text-2xl font-black">
+                            <div className="text-3xl font-black">
                                 {skillsDemand.length > 0 ? skillsDemand[0]?.SkillName : 'N/A'}
-                            </p>
-                        </div>
-                        <div className="p-5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
-                            <div className="flex items-center gap-3 mb-2">
-                                <BarChart3 className="w-5 h-5 text-emerald-500" />
-                                <span className="text-xs font-black text-emerald-500 uppercase">Skills Tracked</span>
                             </div>
-                            <p className="text-3xl font-black">{skillsDemand.length}</p>
+                            <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">In Market</p>
+                        </div>
+                        <div className="glass-card rounded-[2rem] p-6 border border-emerald-500/20">
+                            <div className="flex items-center gap-3 mb-2">
+                                <BarChart3 size={18} className="text-emerald-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Skills Tracked</span>
+                            </div>
+                            <div className="text-3xl font-black">{skillsDemand.length}</div>
+                            <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Market Data</p>
                         </div>
                     </div>
 
@@ -277,7 +282,7 @@ const SkillGapAnalysis = ({ skillGaps: initialSkillGaps, loading: initialLoading
                         <div className="space-y-4">
                             {skillsDemand.map((skill, index) => (
                                 <div
-                                    key={skill.SkillID}
+                                    key={`skill-${skill.SkillID}-${index}`}
                                     className="glass-card p-6 rounded-[2rem] hover:border-indigo-500/30 transition-all"
                                 >
                                     <div className="flex items-center justify-between mb-4">

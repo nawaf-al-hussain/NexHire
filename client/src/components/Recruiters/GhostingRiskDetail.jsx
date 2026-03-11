@@ -352,41 +352,64 @@ const GhostingRiskDetail = () => {
 
             {/* Reminder Modal */}
             {showReminderModal && selectedCandidate && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="glass-card rounded-[2rem] p-8 max-w-md w-full mx-4">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-black uppercase tracking-tight">Send Reminder</h3>
-                            <button onClick={() => setShowReminderModal(false)} className="p-2 hover:bg-slate-700 rounded-lg transition-all">
-                                <X size={20} />
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-300">
+                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setShowReminderModal(false)}></div>
+
+                    <div className="relative bg-[var(--bg-primary)] border border-[var(--border-primary)] w-full max-w-lg overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col text-[var(--text-primary)]">
+                        {/* Header */}
+                        <div className="p-8 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--bg-accent)]/20">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                                    <Bell className="text-rose-500" size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black tracking-tight">Send Reminder</h3>
+                                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-1 italic">Reach out to candidate</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowReminderModal(false)}
+                                className="p-2 hover:bg-[var(--bg-tertiary)] rounded-xl transition-all"
+                            >
+                                <X size={20} className="text-[var(--text-muted)]" />
                             </button>
                         </div>
-                        <div className="space-y-4">
-                            <div>
-                                <p className="text-xs font-bold dark:text-slate-400 text-slate-500 uppercase tracking-widest mb-1">Candidate</p>
-                                <p className="text-sm font-black dark:text-white text-slate-800">{selectedCandidate.CandidateName}</p>
+
+                        {/* Content */}
+                        <div className="p-8 space-y-6">
+                            {/* Candidate Info */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-primary)]">
+                                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Candidate</p>
+                                    <p className="text-sm font-black text-[var(--text-primary)] truncate">{selectedCandidate.CandidateName}</p>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-primary)]">
+                                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Job</p>
+                                    <p className="text-sm font-black text-[var(--text-primary)] truncate">{selectedCandidate.JobTitle}</p>
+                                </div>
                             </div>
+
+                            {/* Message */}
                             <div>
-                                <p className="text-xs font-bold dark:text-slate-400 text-slate-500 uppercase tracking-widest mb-1">Job</p>
-                                <p className="text-sm font-black dark:text-white text-slate-800">{selectedCandidate.JobTitle}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold dark:text-slate-400 text-slate-500 uppercase tracking-widest mb-1">Message</p>
+                                <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">Message</p>
                                 <textarea
-                                    className="w-full dark:bg-slate-800/50 bg-white border dark:border-slate-700 border-slate-300 rounded-xl p-4 text-sm font-bold dark:text-slate-200 text-slate-700 placeholder:text-slate-500 focus:ring-2 focus:ring-rose-500/30 outline-none resize-none"
-                                    rows={3}
+                                    className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-2xl p-4 text-sm font-bold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500/50 outline-none resize-none transition-all"
+                                    rows={4}
                                     defaultValue={`Hi ${selectedCandidate.CandidateName?.split(' ')[0] || 'there'}, just following up on your application for ${selectedCandidate.JobTitle}. Please let us know if you're still interested!`}
                                 />
                             </div>
-                            <div className="flex gap-3 pt-4">
+
+                            {/* Actions */}
+                            <div className="flex gap-3 pt-2">
                                 <button
                                     onClick={() => setShowReminderModal(false)}
-                                    className="flex-1 py-3 rounded-xl border dark:border-slate-600 border-slate-300 dark:text-slate-400 text-slate-600 font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition-all"
+                                    className="flex-1 px-6 py-4 rounded-2xl border border-[var(--border-primary)] text-[var(--text-secondary)] font-black uppercase text-xs tracking-widest hover:bg-[var(--bg-accent)] transition-all"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleSendReminder}
-                                    className="flex-1 py-3 rounded-xl bg-rose-500 text-white font-black uppercase text-xs tracking-widest hover:bg-rose-600 transition-all"
+                                    className="flex-1 px-6 py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-purple-600 text-white font-black uppercase text-xs tracking-widest hover:from-rose-600 hover:to-purple-700 shadow-lg shadow-rose-500/25 transition-all"
                                 >
                                     Send Reminder
                                 </button>

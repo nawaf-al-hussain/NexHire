@@ -22,18 +22,18 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 .dark {
-  --bg-primary: #0f172a;
-  --bg-secondary: #0f172a;
-  --bg-accent: #1e293b;
+  --bg-primary: #020617;
+  --bg-secondary: #020617;
+  --bg-accent: #0f172a;
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  --border-primary: rgba(255, 255, 255, 0.08);
+  --border-primary: rgba(255, 255, 255, 0.05);
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.05);
-  --panel-bg: #0f172a;
-  --sidebar-bg: #0f172a;
-  --header-bg: rgba(15, 23, 42, 0.8);
+  --panel-bg: #020617;
+  --sidebar-bg: #020617;
+  --header-bg: rgba(2, 6, 23, 0.8);
 }
 
 @layer components {

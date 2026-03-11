@@ -9,7 +9,7 @@ Welcome to the NexHire development documentation. This guide is split into modul
 - [🗄️ Database Guide](./Database_Guide.md) - Schema, Views, Stored Procs, and CLR reference.
 - [⚙️ Backend Development](./Backend_Development.md) - API creation, Auth, and RBAC.
 - [🎨 Frontend Development](./Frontend_Development.md) - Components, Styling, and Feature addition.
-- [📋 Rules & Checklists](./Rules_and_Checklists.md) - Mandatory steps for every feature.
+- [📋 Rules & Checklists](./Best_Practices_and_Rules.md) - Mandatory steps for every feature.
 - [🚀 Features Inventory](./Features_Inventory.md) - Full list of implemented functionality.
 
 ---
@@ -20,6 +20,40 @@ Welcome to the NexHire development documentation. This guide is split into modul
 - **Profile Access:** Profile tab removed from sidebar navigation, now accessible via clicking the user card at the bottom of the sidebar
 - **Notifications:** Notifications tab removed from sidebar, now accessible via Bell icon in header
 - **Component:** `components/DashboardShell.jsx` - Added `onProfileClick` handler for user card
+
+### Salary Visibility Feature (Job Roles)
+- **Location:** Recruiter Dashboard → Job Roles tab → Create/Edit Job
+- **Backend:** `/api/jobs` endpoints (GET, POST, PUT) now handle salary ranges
+- **Frontend:** `components/Jobs/JobEditModal.jsx` - Added salary section with:
+  - Min/Max salary input fields
+  - "Make salary visible to candidates" checkbox (IsTransparent toggle)
+  - Collapsible salary section
+- **Table:** `JobSalaryRanges` (RangeID, JobID, MinSalary, MaxSalary, IsTransparent)
+- **Candidate View:** `/api/candidates/discover` returns SalaryMin/SalaryMax when IsTransparent=1
+- **Display:** Candidates see salary in emerald green box when viewing job details in Discover Jobs
+
+### Auto Rejection Button (Recruiter Dashboard)
+- **Location:** Recruiter Dashboard → Job Roles tab (as button in header)
+- **Previous Location:** Was a separate sidebar tab
+- **Frontend:** `pages/RecruiterDashboard.jsx` - Button in header area
+- **Component:** `components/Recruiters/AutoRejectionLog.jsx` - Added `onGoBack` prop and back button
+- **Features:** Rose-colored button, batch run functionality, auto-rejected candidates list
+- **Note:** Hero stats (Total Pool, Top Matches, Open Roles) removed from all recruiter tabs
+
+### Applied Jobs Behavior (Candidate Dashboard)
+- **Location:** Candidate Dashboard → Discover Jobs tab
+- **Previous Behavior:** Job card disappeared after applying
+- **New Behavior:** Applied jobs stay visible with greyed-out appearance
+- **Changes:**
+  - Job card has `opacity-60` and grey styling when applied
+  - Job title turns grey
+  - Status badge shows "Applied" instead of "Active"
+  - Button shows "Applied" in grey
+
+### Screening Bot Back Button Update
+- **Location:** Recruiter Dashboard → Screening Bot tab
+- **Changes:** Back button moved to top of component, styled consistently with AutoRejectionLog
+- **Component:** `components/Recruiters/ScreeningBot.jsx`
 
 ### Profile Management (Candidate Dashboard)
 - **Location:** Candidate Dashboard → "Profile" tab
@@ -99,6 +133,49 @@ Welcome to the NexHire development documentation. This guide is split into modul
 - **Frontend:** `components/Admin/EmailQueueManager.jsx`
 - **Table:** `EmailQueue`
 - **Features:** Email notification queue management with stats (total, sent, pending), filters (status, type), data table with recipient, type, subject, status, created date, action buttons (retry, delete), and send test email functionality
+
+### Vacancy Utilization Fix (Job Roles)
+- **Location:** Recruiter Dashboard → Job Roles tab
+- **Backend:** `GET /api/jobs` now uses `vw_VacancyUtilization` view for accurate application counts
+- **View:** `vw_VacancyUtilization` (FilledVacancies, TotalVacancies, UtilizationRate)
+- **Fix:** Previously used incorrect column; now correctly shows filled vs total vacancies per active job
+
+### Gradient Design Headers (Admin Dashboard)
+- **Location:** Admin Dashboard → All tabs
+- **Frontend:** All admin tab components now use consistent gradient design headers
+- **Pattern:** `glass-card rounded-[3rem] p-8 bg-gradient-to-r from-[color]-500/5 to-[color]-500/5 border border-[color]-500/20`
+- **Components Updated:** DiversityGoals, ConsentManagement, BiasLogs, RemoteWorkAnalytics, SalaryTransparencyAnalytics, VacancyUtilizationAdmin, RecruiterPerformanceAdmin, EmailQueueManager
+
+### Gradient Design Headers (Recruiter Dashboard)
+- **Location:** Recruiter Dashboard → Talent Pool, Job Roles tabs
+- **Frontend:** `components/Recruiters/TalentPool.jsx`, `components/Jobs/JobList.jsx`
+- **Pattern:** Glass-card with gradient header, proper typography (labels: 10px uppercase tracking-widest)
+- **Features:** Consistent styling across recruiter tabs
+
+### Job Roles Restructuring (Recruiter Dashboard)
+- **Location:** Recruiter Dashboard → Job Roles tab
+- **Frontend:** `components/Jobs/JobList.jsx`, `pages/RecruiterDashboard.jsx`
+- **Changes:**
+  - Post Job button moved inside gradient header (indigo-600)
+  - Auto Rejection and Screening Bot buttons moved to right of search bar as minimal icon-only buttons
+  - New Archives button added as minimal icon near filter button
+  - Buttons restructured for cleaner layout
+- **Components:** `pages/RecruiterDashboard.jsx` passes `onOpenJobModal`, `onOpenScreeningBot`, `onOpenAutoRejection` props to JobList
+
+### Resume Analysis Fixes (Talent Pool & Candidate Dashboard)
+- **Location:** Recruiter Dashboard → Talent Pool, Candidate Dashboard → Resume Score
+- **Backend:** `GET /api/recruiters/talent-pool` returns `YearsOfExperience` (not `YearsExperience`)
+- **Frontend:**
+  - `components/Recruiters/TalentPool.jsx` - Fixed field name, shows "N/A" for resume score when no data
+  - `components/Candidate/ResumeScore.jsx` - Removed fake 72% placeholder, shows empty state "No Resume Data Available" when no resume uploaded
+- **Table:** `ResumeInsights` stores resume quality scores (ResumeQualityScore, ProcessingStatus)
+- **Behavior:** Shows "N/A" when candidate has no resume uploaded or processed
+
+### SQL Views Tab (Admin Dashboard)
+- **Location:** Admin Dashboard → "SQL Views" tab
+- **Backend:** `GET /api/maintenance/sql-views`, `GET /api/maintenance/sql-views/:viewName`
+- **Frontend:** `components/Admin/SQLViews.jsx`
+- **Features:** Browse 27 database views organized by category (Analytics, Performance, Bias & Compliance, Candidate, Career & Referral, Market, Interview), click any view to execute SELECT * and display results in data table, export to CSV, search/filter views
 
 ---
 

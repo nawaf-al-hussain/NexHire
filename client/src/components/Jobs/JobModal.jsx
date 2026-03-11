@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Monitor, ClipboardList, Target, AlertCircle, PlusCircle, CheckCircle2, ChevronRight, Hash, Star, Plus, Trash2, CheckCircle, Info, Sparkles } from 'lucide-react';
+import { X, Search, Monitor, ClipboardList, Target, AlertCircle, PlusCircle, CheckCircle2, ChevronRight, Hash, Star, Plus, Trash2, CheckCircle, Info, Sparkles, DollarSign } from 'lucide-react';
 import API_BASE from '../../apiConfig';
 import axios from 'axios';
 
@@ -9,6 +9,9 @@ const JobModal = ({ isOpen, onClose, onJobCreated }) => {
     const [location, setLocation] = useState('');
     const [minExperience, setMinExperience] = useState(0);
     const [vacancies, setVacancies] = useState(1);
+    const [minSalary, setMinSalary] = useState('');
+    const [maxSalary, setMaxSalary] = useState('');
+    const [salaryTransparent, setSalaryTransparent] = useState(false);
     const [availableSkills, setAvailableSkills] = useState([]);
     const [selectedSkills, setSelectedSkills] = useState([]); // [{id, name, isMandatory, minProficiency}]
     const [loading, setLoading] = useState(false);
@@ -62,7 +65,10 @@ const JobModal = ({ isOpen, onClose, onJobCreated }) => {
                 location,
                 minExperience,
                 vacancies,
-                skills: selectedSkills
+                skills: selectedSkills,
+                minSalary: minSalary ? parseInt(minSalary) : null,
+                maxSalary: maxSalary ? parseInt(maxSalary) : null,
+                salaryTransparent
             });
             onJobCreated();
             onClose();
@@ -73,6 +79,9 @@ const JobModal = ({ isOpen, onClose, onJobCreated }) => {
             setMinExperience(0);
             setVacancies(1);
             setSelectedSkills([]);
+            setMinSalary('');
+            setMaxSalary('');
+            setSalaryTransparent(false);
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to create job posting.');
         } finally {
@@ -149,6 +158,52 @@ const JobModal = ({ isOpen, onClose, onJobCreated }) => {
                                     value={vacancies}
                                     onChange={(e) => setVacancies(parseInt(e.target.value))}
                                     className="w-full bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl py-4 px-6 text-sm text-[var(--text-primary)] focus:bg-white/10 dark:focus:bg-white/5 outline-none transition-all font-black text-center"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Salary Range */}
+                    <div className="space-y-6 p-6 rounded-3xl bg-[var(--bg-accent)]/10 border border-[var(--border-primary)]">
+                        <div className="flex items-center justify-between pb-4 border-b border-[var(--border-primary)]">
+                            <div className="flex items-center gap-3">
+                                <DollarSign size={18} className="text-emerald-500" />
+                                <h3 className="text-xs font-black uppercase tracking-widest">Salary Range</h3>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    id="salaryTransparent"
+                                    checked={salaryTransparent}
+                                    onChange={(e) => setSalaryTransparent(e.target.checked)}
+                                    className="w-5 h-5 rounded border-[var(--border-primary)] bg-[var(--bg-accent)] text-indigo-500 focus:ring-indigo-500/30"
+                                />
+                                <label htmlFor="salaryTransparent" className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest cursor-pointer">
+                                    Make salary visible to candidates
+                                </label>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-1">Min Salary (USD)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={minSalary}
+                                    onChange={(e) => setMinSalary(e.target.value)}
+                                    placeholder="e.g. 80000"
+                                    className="w-full bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl py-4 px-6 text-sm text-[var(--text-primary)] focus:bg-white/10 dark:focus:bg-white/5 outline-none transition-all placeholder:text-[var(--text-muted)] font-bold"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-1">Max Salary (USD)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={maxSalary}
+                                    onChange={(e) => setMaxSalary(e.target.value)}
+                                    placeholder="e.g. 120000"
+                                    className="w-full bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl py-4 px-6 text-sm text-[var(--text-primary)] focus:bg-white/10 dark:focus:bg-white/5 outline-none transition-all placeholder:text-[var(--text-muted)] font-bold"
                                 />
                             </div>
                         </div>

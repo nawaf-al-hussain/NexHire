@@ -11,8 +11,8 @@ const { protect } = require('../middleware/rbac');
 router.post('/message', protect, async (req, res) => {
     const startTime = Date.now();
     const { message, sessionId } = req.body;
-    const userId = req.user.UserID;
-    const roleId = req.user.RoleID;
+    const userId = req.user.userid;
+    const roleId = req.user.roleid;
 
     if (!message || !message.trim()) {
         return res.status(400).json({ error: "Message is required." });
@@ -32,18 +32,18 @@ router.post('/message', protect, async (req, res) => {
         let candidateId = null;
         if (roleId === 3) {
             const candidateResult = await query(`
-                SELECT CandidateID FROM Candidates WHERE UserID = ?
+                SELECT candidateid FROM candidates WHERE userid = ?
             `, [userId]);
             if (candidateResult.length > 0) {
-                candidateId = candidateResult[0].CandidateID;
+                candidateId = candidateResult[0].candidateid;
             }
         }
 
         // Save interaction to database
         await query(`
-            INSERT INTO ChatbotInteractions 
-            (CandidateID, SessionID, UserQuery, BotResponse, IntentRecognized, 
-             ConfidenceScore, EntitiesRecognized, ResolutionTimeSeconds, Platform)
+            INSERT INTO chatbotinteractions 
+            (candidateid, sessionid, userquery, botresponse, intentrecognized, 
+             confidencescore, entitiesrecognized, resolutiontimeseconds, platform)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Web')
         `, [
             candidateId,
@@ -83,10 +83,10 @@ router.post('/feedback', protect, async (req, res) => {
 
     try {
         await query(`
-            UPDATE ChatbotInteractions 
-            SET WasHelpful = ? 
-            WHERE InteractionID = ?
-        `, [wasHelpful ? 1 : 0, interactionId]);
+            UPDATE chatbotinteractions 
+            SET washelpful = ? 
+            WHERE interactionid = ?
+        `, [wasHelpful, interactionId]);
 
         res.json({ success: true });
     } catch (err) {
@@ -101,8 +101,8 @@ router.post('/feedback', protect, async (req, res) => {
  * @access  Private (Authenticated users)
  */
 router.get('/history', protect, async (req, res) => {
-    const userId = req.user.UserID;
-    const roleId = req.user.RoleID;
+    const userId = req.user.userid;
+    const roleId = req.user.roleid;
 
     try {
         // Get CandidateID if user is a candidate
@@ -110,27 +110,29 @@ router.get('/history', protect, async (req, res) => {
 
         if (roleId === 3) {
             const candidateResult = await query(`
-                SELECT CandidateID FROM Candidates WHERE UserID = ?
+                SELECT candidateid FROM candidates WHERE userid = ?
             `, [userId]);
             if (candidateResult.length > 0) {
-                whereClause = `WHERE ci.CandidateID = ${candidateResult[0].CandidateID}`;
+                whereClause = `WHERE ci.candidateid = ${candidateResult[0].candidateid}`;
             }
         }
 
         const history = await query(`
             SELECT 
-                ci.InteractionID,
-                ci.SessionID,
-                ci.UserQuery,
-                ci.BotResponse,
-                ci.IntentRecognized,
-                ci.WasHelpful,
-                ci.CreatedAt
-            FROM ChatbotInteractions ci
+                ci.interactionid,
+                ci.sessionid,
+                ci.userquery,
+                ci.botresponse,
+                ci.intentrecognized,
+                ci.washelpful,
+                ci.createdat
+            FROM chatbotinteractions ci
             ${whereClause}
-            ORDER BY ci.CreatedAt DESC
+            ORDER BY ci.createdat DESC
         `);
 
+        // Convert the history keys to what frontend might expect if needed
+        // But better to normalize frontend too. For now, let's keep it lowercase.
         res.json(history);
     } catch (err) {
         console.error("Chatbot History Error:", err.message);

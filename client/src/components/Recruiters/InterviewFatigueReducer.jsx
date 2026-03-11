@@ -85,23 +85,25 @@ const InterviewFatigueReducer = () => {
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
-                        <Lightbulb className="text-amber-500" size={28} />
-                        Interview Fatigue Reducer
-                    </h2>
-                    <p className="text-sm text-[var(--text-muted)] mt-1">
-                        Optimize interview rounds and reduce candidate fatigue
-                    </p>
+            {/* Gradient Header */}
+            <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-amber-500/5 to-orange-500/5 border border-amber-500/20">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                            <Lightbulb size={28} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black uppercase tracking-tight">Interview Fatigue Reducer</h2>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Optimize interview rounds and reduce candidate fatigue</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={fetchData}
+                        className="p-3 rounded-xl bg-[var(--bg-accent)] hover:bg-amber-500/10 transition-all"
+                    >
+                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                    </button>
                 </div>
-                <button
-                    onClick={fetchData}
-                    className="p-3 rounded-xl bg-[var(--bg-accent)] hover:bg-amber-500/10 transition-all"
-                >
-                    <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                </button>
             </div>
 
             {/* Selection Panel */}

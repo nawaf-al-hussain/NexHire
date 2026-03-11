@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Users, Calendar, Trash2, ExternalLink, ShieldCheck, Target, Pencil, ChevronDown, ChevronUp, Star, Code } from 'lucide-react';
+import { MapPin, Users, Calendar, Trash2, ExternalLink, ShieldCheck, Target, Pencil, ChevronDown, ChevronUp, Star, Code, ArchiveRestore } from 'lucide-react';
 import JobEditModal from './JobEditModal';
 import API_BASE from '../../apiConfig';
 import axios from 'axios';
 
-const JobCard = ({ job, onDelete, onFindMatches, onOpenPipeline, onUpdateJob, matches = [] }) => {
+const JobCard = ({ job, onDelete, onFindMatches, onOpenPipeline, onUpdateJob, matches = [], isArchived = false }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showOnlyApplicants, setShowOnlyApplicants] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -45,9 +45,9 @@ const JobCard = ({ job, onDelete, onFindMatches, onOpenPipeline, onUpdateJob, ma
 
     return (
         <>
-            <div className="glass-card p-8 rounded-[2rem] hover:bg-indigo-500/[0.02] transition-all group relative overflow-hidden">
+            <div className={`glass-card p-8 rounded-[2rem] hover:bg-indigo-500/[0.02] transition-all group relative overflow-hidden ${isArchived ? 'border-amber-500/20 bg-amber-500/5' : ''}`}>
                 {/* Background Glow */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-colors"></div>
+                <div className={`absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-colors ${isArchived ? 'bg-amber-500/5' : ''}`}></div>
 
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 relative z-10">
                     <div className="flex gap-6 flex-1">
@@ -159,32 +159,49 @@ const JobCard = ({ job, onDelete, onFindMatches, onOpenPipeline, onUpdateJob, ma
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setShowEditModal(true)}
-                                className="p-3 bg-[var(--bg-accent)] border border-[var(--border-primary)] hover:border-indigo-500/30 hover:bg-indigo-500/10 text-[var(--text-muted)] hover:text-indigo-500 transition-all rounded-xl"
-                                title="Edit Job"
-                            >
-                                <Pencil size={16} />
-                            </button>
-                            <button
-                                onClick={() => onDelete(job.JobID)}
-                                className="p-3 bg-[var(--bg-accent)] border border-[var(--border-primary)] hover:border-rose-500/30 hover:bg-rose-500/10 text-[var(--text-muted)] hover:text-rose-500 transition-all rounded-xl"
-                                title="Archive Job"
-                            >
-                                <Trash2 size={16} />
-                            </button>
+                            {isArchived ? (
+                                <>
+                                    <button
+                                        onClick={() => onDelete(job.JobID)}
+                                        className="p-3 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-500 transition-all rounded-xl flex items-center gap-2"
+                                        title="Restore Job"
+                                    >
+                                        <ArchiveRestore size={16} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest pr-1">Restore</span>
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => setShowEditModal(true)}
+                                        className="p-3 bg-[var(--bg-accent)] border border-[var(--border-primary)] hover:border-indigo-500/30 hover:bg-indigo-500/10 text-[var(--text-muted)] hover:text-indigo-500 transition-all rounded-xl"
+                                        title="Edit Job"
+                                    >
+                                        <Pencil size={16} />
+                                    </button>
+                                    <button
+                                        onClick={() => onDelete(job.JobID)}
+                                        className="p-3 bg-[var(--bg-accent)] border border-[var(--border-primary)] hover:border-rose-500/30 hover:bg-rose-500/10 text-[var(--text-muted)] hover:text-rose-500 transition-all rounded-xl"
+                                        title="Archive Job"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </>
+                            )}
                             <button
                                 onClick={onOpenPipeline}
-                                className="p-3 bg-[var(--bg-accent)] border border-[var(--border-primary)] hover:border-indigo-500/30 hover:bg-indigo-500/10 text-[var(--text-muted)] hover:text-indigo-500 transition-all rounded-xl flex items-center gap-2 group/pipe"
-                                title="View Active Pipeline"
+                                className={`p-3 bg-[var(--bg-accent)] border border-[var(--border-primary)] hover:border-indigo-500/30 hover:bg-indigo-500/10 text-[var(--text-muted)] hover:text-indigo-500 transition-all rounded-xl flex items-center gap-2 group/pipe ${isArchived ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                title={isArchived ? "Pipeline unavailable for archived jobs" : "View Active Pipeline"}
+                                disabled={isArchived}
                             >
                                 <ExternalLink size={16} className="group-hover/pipe:scale-110 transition-transform" />
                                 <span className="text-[10px] font-black uppercase tracking-widest pr-1">Pipeline</span>
                             </button>
                             <button
                                 onClick={onFindMatches}
-                                className="p-3 bg-indigo-600 border border-indigo-500 hover:bg-indigo-500 text-white transition-all rounded-xl shadow-lg shadow-indigo-600/20 flex items-center gap-2 group/match"
-                                title="Find Best Matches"
+                                className={`p-3 bg-indigo-600 border border-indigo-500 hover:bg-indigo-500 text-white transition-all rounded-xl shadow-lg shadow-indigo-600/20 flex items-center gap-2 group/match ${isArchived ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                title={isArchived ? "Matching unavailable for archived jobs" : "Find Best Matches"}
+                                disabled={isArchived}
                             >
                                 <Target size={16} className="group-hover/match:scale-110 transition-transform" />
                                 <span className="text-[10px] font-black uppercase tracking-widest pr-1">Match Talent</span>

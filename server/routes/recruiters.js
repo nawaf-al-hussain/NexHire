@@ -18,39 +18,39 @@ router.get('/talent-pool', protect, authorize([1, 2]), async (req, res) => {
         // Base query - using try-catch for each join to handle missing tables gracefully
         let queryStr = `
             SELECT 
-                c.CandidateID, 
-                c.FullName, 
-                c.Location, 
-                c.YearsOfExperience,
-                (SELECT STRING_AGG(s.SkillName, ', ') 
-                 FROM CandidateSkills cs 
-                 JOIN Skills s ON cs.SkillID = s.SkillID 
-                 WHERE cs.CandidateID = c.CandidateID) as Skills
-            FROM Candidates c
-            WHERE c.UserID IN (SELECT UserID FROM Users WHERE IsActive = 1)
+                c.candidateid, 
+                c.fullname, 
+                c.location, 
+                c.yearsofexperience,
+                (SELECT STRING_AGG(s.skillname, ', ') 
+                 FROM candidateskills cs 
+                 JOIN skills s ON cs.skillid = s.skillid 
+                 WHERE cs.candidateid = c.candidateid) as skills
+            FROM candidates c
+            WHERE c.userid IN (SELECT userid FROM users WHERE isactive = TRUE)
         `;
 
         const params = [];
 
         // Search by name
         if (search) {
-            queryStr += ` AND c.FullName LIKE ?`;
+            queryStr += ` AND c.fullname ILIKE ?`;
             params.push(`%${search}%`);
         }
 
         // Filter by location
         if (location) {
-            queryStr += ` AND c.Location LIKE ?`;
+            queryStr += ` AND c.location ILIKE ?`;
             params.push(`%${location}%`);
         }
 
         // Filter by minimum experience
         if (minExperience) {
-            queryStr += ` AND c.YearsOfExperience >= ?`;
+            queryStr += ` AND c.yearsofexperience >= ?`;
             params.push(parseInt(minExperience));
         }
 
-        queryStr += ` ORDER BY c.FullName ASC`;
+        queryStr += ` ORDER BY c.fullname ASC`;
 
         const candidates = await query(queryStr, params);
 
@@ -60,22 +60,22 @@ router.get('/talent-pool', protect, authorize([1, 2]), async (req, res) => {
 
             // Resume Score
             try {
-                const rs = await query(`SELECT TOP 1 ResumeQualityScore FROM ResumeInsights WHERE CandidateID = ?`, [c.CandidateID]);
-                c.ResumeScore = rs[0]?.ResumeQualityScore || 0;
+                const rs = await query(`SELECT resumequalityscore FROM resumeinsights WHERE candidateid = ? LIMIT 1`, [c.candidateid]);
+                c.ResumeScore = rs[0]?.resumequalityscore || 0;
             } catch { c.ResumeScore = 0; }
 
             // Ghosting Risk
             try {
-                const gr = await query(`SELECT TOP 1 OverallRiskLevel FROM vw_GhostingRiskDashboard WHERE CandidateID = ?`, [c.CandidateID]);
-                c.GhostingRisk = gr[0]?.OverallRiskLevel || 'Low';
+                const gr = await query(`SELECT overallrisklevel FROM vw_ghostingriskdashboard WHERE candidateid = ? LIMIT 1`, [c.candidateid]);
+                c.GhostingRisk = gr[0]?.overallrisklevel || 'Low';
             } catch { c.GhostingRisk = 'Low'; }
 
             // Gamification
             try {
-                const gm = await query(`SELECT TOP 1 Points, Level, StreakDays FROM CandidateGamification WHERE CandidateID = ?`, [c.CandidateID]);
-                c.GamificationPoints = gm[0]?.Points || 0;
-                c.GamificationLevel = gm[0]?.Level || 1;
-                c.StreakDays = gm[0]?.StreakDays || 0;
+                const gm = await query(`SELECT points, level, streakdays FROM candidategamification WHERE candidateid = ? LIMIT 1`, [c.candidateid]);
+                c.GamificationPoints = gm[0]?.points || 0;
+                c.GamificationLevel = gm[0]?.level || 1;
+                c.StreakDays = gm[0]?.streakdays || 0;
             } catch {
                 c.GamificationPoints = 0;
                 c.GamificationLevel = 1;
@@ -84,14 +84,14 @@ router.get('/talent-pool', protect, authorize([1, 2]), async (req, res) => {
 
             // Remote Preference
             try {
-                const rp = await query(`SELECT TOP 1 RemotePreference FROM CandidateLocationPreferences WHERE CandidateID = ?`, [c.CandidateID]);
-                c.RemotePreference = rp[0]?.RemotePreference || null;
+                const rp = await query(`SELECT remotepreference FROM candidatelocationpreferences WHERE candidateid = ? LIMIT 1`, [c.candidateid]);
+                c.RemotePreference = rp[0]?.remotepreference || null;
             } catch { c.RemotePreference = null; }
 
             // Referral Source - check if candidate was referred
             try {
-                const rf = await query(`SELECT TOP 1 RelationshipType FROM ReferralNetwork WHERE ReferredCandidateID = ?`, [c.CandidateID]);
-                c.ReferralSource = rf[0]?.RelationshipType || null;
+                const rf = await query(`SELECT relationshiptype FROM referralnetwork WHERE referredcandidateid = ? LIMIT 1`, [c.candidateid]);
+                c.ReferralSource = rf[0]?.relationshiptype || null;
             } catch { c.ReferralSource = null; }
         }
 
@@ -118,26 +118,23 @@ router.post('/search', protect, authorize([1, 2]), async (req, res) => {
             // Try fuzzy search with stored procedure
             try {
                 console.log("Running fuzzy search:", name, "threshold:", threshold || 0.6);
-                const fuzzyResults = await query(
-                    "EXEC sp_FuzzySearchCandidates @SearchName=?, @Threshold=?",
-                    [name, threshold || 0.85]
-                );
+                const fuzzyResults = await query("SELECT * FROM sp_fuzzysearchcandidates(?, ?)", [name, parseFloat(threshold) || 0.85]);
                 console.log("Fuzzy results:", fuzzyResults);
-                candidateIDs = fuzzyResults.map(r => r.CandidateID);
+                candidateIDs = fuzzyResults.map(r => r.candidateid); // PostgreSQL returns lowercase column names
             } catch (fuzzyErr) {
                 console.log("Fuzzy SP failed, using LIKE:", fuzzyErr.message);
                 // Fallback to LIKE
                 const likeResults = await query(`
-                    SELECT CandidateID FROM Candidates WHERE FullName LIKE ?
+                    SELECT candidateid as candidateid FROM candidates WHERE fullname ILIKE ?
                 `, [`%${name}%`]);
-                candidateIDs = likeResults.map(r => r.CandidateID);
+                candidateIDs = likeResults.map(r => r.candidateid);
             }
         } else {
             // Regular LIKE search
             const likeResults = await query(`
-                SELECT CandidateID FROM Candidates WHERE FullName LIKE ?
+                SELECT candidateid as candidateid FROM candidates WHERE fullname ILIKE ?
             `, [`%${name}%`]);
-            candidateIDs = likeResults.map(r => r.CandidateID);
+            candidateIDs = likeResults.map(r => r.candidateid);
         }
 
         if (candidateIDs.length === 0) {
@@ -148,42 +145,46 @@ router.post('/search', protect, authorize([1, 2]), async (req, res) => {
         const placeholders = candidateIDs.map(() => '?').join(',');
         const candidates = await query(`
             SELECT 
-                c.CandidateID, 
-                c.FullName, 
-                c.Location, 
-                c.YearsOfExperience,
-                (SELECT STRING_AGG(s.SkillName, ', ') 
-                 FROM CandidateSkills cs 
-                 JOIN Skills s ON cs.SkillID = s.SkillID 
-                 WHERE cs.CandidateID = c.CandidateID) as Skills
-            FROM Candidates c
-            WHERE c.CandidateID IN (${placeholders})
+                c.candidateid, 
+                c.fullname, 
+                c.location, 
+                c.yearsofexperience,
+                (SELECT STRING_AGG(s.skillname, ', ') 
+                 FROM candidateskills cs 
+                 JOIN skills s ON cs.skillid = s.skillid 
+                 WHERE cs.candidateid = c.candidateid) as skills
+            FROM candidates c
+            WHERE c.candidateid IN (${placeholders})
         `, candidateIDs);
 
         // Get additional data for each candidate
         for (let i = 0; i < candidates.length; i++) {
             const c = candidates[i];
             try {
-                const rs = await query(`SELECT TOP 1 ResumeQualityScore FROM ResumeInsights WHERE CandidateID = ?`, [c.CandidateID]);
-                c.ResumeScore = rs[0]?.ResumeQualityScore || 0;
+                const rs = await query(`SELECT resumequalityscore FROM resumeinsights WHERE candidateid = ? LIMIT 1`, [c.candidateid]);
+                c.ResumeScore = rs[0]?.resumequalityscore || 0;
             } catch { c.ResumeScore = 0; }
             try {
-                const gr = await query(`SELECT TOP 1 OverallRiskLevel FROM vw_GhostingRiskDashboard WHERE CandidateID = ?`, [c.CandidateID]);
-                c.GhostingRisk = gr[0]?.OverallRiskLevel || 'Low';
+                const gr = await query(`SELECT overallrisklevel FROM vw_ghostingriskdashboard WHERE candidateid = ? LIMIT 1`, [c.candidateid]);
+                c.GhostingRisk = gr[0]?.overallrisklevel || 'Low';
             } catch { c.GhostingRisk = 'Low'; }
             try {
-                const gm = await query(`SELECT TOP 1 Points, Level, StreakDays FROM CandidateGamification WHERE CandidateID = ?`, [c.CandidateID]);
-                c.GamificationPoints = gm[0]?.Points || 0;
-                c.GamificationLevel = gm[0]?.Level || 1;
-                c.StreakDays = gm[0]?.StreakDays || 0;
-            } catch { c.GamificationPoints = 0; c.GamificationLevel = 1; c.StreakDays = 0; }
+                const gm = await query(`SELECT points, level, streakdays FROM candidategamification WHERE candidateid = ? LIMIT 1`, [c.candidateid]);
+                c.GamificationPoints = gm[0]?.points || 0;
+                c.GamificationLevel = gm[0]?.level || 1;
+                c.StreakDays = gm[0]?.streakdays || 0;
+            } catch { 
+                c.GamificationPoints = 0;
+                c.GamificationLevel = 1;
+                c.StreakDays = 0;
+            }
             try {
-                const rp = await query(`SELECT TOP 1 RemotePreference FROM CandidateLocationPreferences WHERE CandidateID = ?`, [c.CandidateID]);
-                c.RemotePreference = rp[0]?.RemotePreference || null;
+                const rp = await query(`SELECT remotepreference FROM candidatelocationpreferences WHERE candidateid = ? LIMIT 1`, [c.candidateid]);
+                c.RemotePreference = rp[0]?.remotepreference || null;
             } catch { c.RemotePreference = null; }
             try {
-                const rf = await query(`SELECT TOP 1 RelationshipType FROM ReferralNetwork WHERE ReferredCandidateID = ?`, [c.CandidateID]);
-                c.ReferralSource = rf[0]?.RelationshipType || null;
+                const rf = await query(`SELECT relationshiptype FROM referralnetwork WHERE referredcandidateid = ? LIMIT 1`, [c.candidateid]);
+                c.ReferralSource = rf[0]?.relationshiptype || null;
             } catch { c.ReferralSource = null; }
         }
 
@@ -210,12 +211,12 @@ router.post('/initiate-pipeline', protect, authorize(2), async (req, res) => {
     try {
         // 1. Check if application already exists
         const existing = await query(
-            "SELECT StatusID FROM Applications WHERE JobID = ? AND CandidateID = ? AND IsDeleted = 0",
+            "SELECT statusid FROM applications WHERE jobid = ? AND candidateid = ? AND isdeleted = FALSE",
             [jobID, candidateID]
         );
 
         if (existing.length > 0) {
-            const status = existing[0].StatusID;
+            const status = existing[0].statusid; // PostgreSQL column names are lowercase
             // If already applied (1), screening (2), interview (3), or hired (4), return error
             if ([1, 2, 3, 4].includes(status)) {
                 return res.status(400).json({ error: "Candidate is already in the pipeline for this job." });
@@ -226,13 +227,13 @@ router.post('/initiate-pipeline', protect, authorize(2), async (req, res) => {
             }
             // If rejected (5) or withdrawn (6), we allow "Re-inviting" by updating the record
             await query(
-                "UPDATE Applications SET StatusID = 7, AppliedDate = GETDATE() WHERE JobID = ? AND CandidateID = ?",
+                "UPDATE applications SET statusid = 7, applieddate = NOW() WHERE jobid = ? AND candidateid = ?",
                 [jobID, candidateID]
             );
         } else {
             // 2. Create new application in 'Invited' (ID 7) state
             await query(
-                "INSERT INTO Applications (JobID, CandidateID, StatusID) VALUES (?, ?, 7)",
+                "INSERT INTO applications (jobid, candidateid, statusid) VALUES (?, ?, 7)",
                 [jobID, candidateID]
             );
         }
@@ -254,8 +255,8 @@ router.post('/initiate-pipeline', protect, authorize(2), async (req, res) => {
 router.get('/engagement', protect, authorize([1, 2]), async (req, res) => {
     try {
         const engagement = await query(`
-            SELECT * FROM vw_CandidateEngagement
-            ORDER BY EngagementRate DESC
+            SELECT * FROM vw_candidateengagement
+            ORDER BY engagementrate DESC
         `);
         res.json(engagement);
     } catch (err) {
@@ -276,24 +277,24 @@ router.get('/platform-sync', protect, authorize([1, 2]), async (req, res) => {
     try {
         const platformSync = await query(`
             SELECT 
-                eps.SyncID,
-                eps.Platform,
-                eps.CandidateID,
-                c.FullName,
-                eps.JobID,
-                j.JobTitle,
-                eps.ProfileURL,
-                eps.JobURL,
-                eps.LastSyncedAt,
-                eps.SyncStatus,
-                eps.EndorsementCount,
-                eps.ConnectionCount,
-                eps.PlatformReputationScore,
-                eps.ErrorMessage
-            FROM ExternalPlatformSync eps
-            LEFT JOIN Candidates c ON eps.CandidateID = c.CandidateID
-            LEFT JOIN JobPostings j ON eps.JobID = j.JobID
-            ORDER BY eps.LastSyncedAt DESC
+                eps.syncid,
+                eps.platform,
+                eps.candidateid,
+                c.fullname,
+                eps.jobid,
+                j.jobtitle,
+                eps.profileurl,
+                eps.joburl,
+                eps.lastsyncedat,
+                eps.syncstatus,
+                eps.endorsementcount,
+                eps.connectioncount,
+                eps.platformreputationscore,
+                eps.errormessage
+            FROM externalplatformsync eps
+            LEFT JOIN candidates c ON eps.candidateid = c.candidateid
+            LEFT JOIN jobpostings j ON eps.jobid = j.jobid
+            ORDER BY eps.lastsyncedat DESC
         `);
         res.json(platformSync);
     } catch (err) {
@@ -317,9 +318,9 @@ router.post('/platform-sync', protect, authorize([1, 2]), async (req, res) => {
     try {
         // Insert sync request (actual sync would be handled by background service)
         const result = await query(`
-            INSERT INTO ExternalPlatformSync 
-            (Platform, CandidateID, JobID, SyncDirection, SyncStatus, NextSyncAttempt)
-            VALUES (?, ?, ?, ?, 'Pending', DATEADD(MINUTE, 5, GETDATE()))
+            INSERT INTO externalplatformsync 
+            (platform, candidateid, jobid, syncdirection, syncstatus, nextsyncattempt)
+            VALUES (?, ?, ?, ?, 'Pending', NOW() + INTERVAL '5 minutes')
         `, [platform, candidateID || null, jobID || null, syncDirection]);
 
         res.status(201).json({
@@ -352,12 +353,14 @@ router.post('/screening/run', protect, authorize([1, 2]), async (req, res) => {
     try {
         // Get all applications for the job with status Applied (1)
         const applications = await query(`
-            SELECT a.ApplicationID, a.CandidateID, a.JobID, c.FullName, c.YearsOfExperience, c.ExtractedSkills,
-                   j.MinExperience
-            FROM Applications a
-            JOIN Candidates c ON a.CandidateID = c.CandidateID
-            JOIN JobPostings j ON a.JobID = j.JobID
-            WHERE a.JobID = ? AND a.StatusID = 1 AND a.IsDeleted = 0
+            SELECT 
+                a.applicationid as applicationid, a.candidateid as candidateid, a.jobid as jobid, 
+                c.fullname as fullname, c.yearsofexperience as yearsofexperience, 
+                j.minexperience as minexperience
+            FROM applications a
+            JOIN candidates c ON a.candidateid = c.candidateid
+            JOIN jobpostings j ON a.jobid = j.jobid
+            WHERE a.jobid = ? AND a.statusid = 1 AND a.isdeleted = FALSE
         `, [jobID]);
 
         console.log(`Found ${applications.length} applications to screen for job ${jobID}`);
@@ -368,91 +371,87 @@ router.post('/screening/run', protect, authorize([1, 2]), async (req, res) => {
             try {
                 // Try stored procedure first
                 try {
-                    await query("EXEC sp_AutoScreenApplicationEnhanced ?, ?", [app.ApplicationID, thresholdVal]);
-                } catch (spErr) {
-                    console.log(`SP failed for app ${app.ApplicationID}, using inline logic:`, spErr.message);
+                    // PostgeSQL Procedural call: CALL sp_AutoScreenApplicationEnhanced(?)
+                    await query("CALL sp_autoscreenapplicationenhanced(?)", [app.applicationid]);
+                } catch (procErr) {
+                    console.log(`SP failed for app ${app.applicationid}, using inline logic:`, procErr.message);
+                    
                     // Fallback: inline screening logic
-                    const candidateSkills = await query(`
-                        SELECT cs.SkillID, cs.ProficiencyLevel, js.MinProficiency, js.IsMandatory
-                        FROM CandidateSkills cs
-                        JOIN JobSkills js ON cs.SkillID = js.SkillID
-                        WHERE js.JobID = ? AND cs.CandidateID = ?
-                    `, [app.JobID, app.CandidateID]);
-
-                    let score = 0;
-                    let maxScore = 0;
-                    let mandatoryMet = 0;
-                    let mandatoryTotal = 0;
                     const criteria = [];
+                    const candidateSkills = await query(`
+                        SELECT cs.skillid as skillid, cs.proficiencylevel as proficiencylevel, 
+                                js.minproficiency as minproficiency, js.ismandatory as ismandatory
+                        FROM jobskills js
+                        LEFT JOIN candidateskills cs ON js.skillid = cs.skillid AND cs.candidateid = ?
+                        WHERE js.jobid = ? AND js.ismandatory = TRUE
+                    `, [app.candidateid, app.jobid]);
+
+                    let totalScore = 0;
+                    let mandatoryMet = true;
+                    let mandatoryTotal = 0;
 
                     // Get mandatory skills count
-                    const mandatorySkills = await query(`
-                        SELECT COUNT(*) as cnt FROM JobSkills WHERE JobID = ? AND IsMandatory = 1
-                    `, [app.JobID]);
-                    mandatoryTotal = mandatorySkills[0]?.cnt || 0;
+                    const mandatorySkillsCount = await query(`
+                        SELECT COUNT(*) as cnt FROM jobskills WHERE jobid = ? AND ismandatory = TRUE
+                    `, [app.jobid]);
+                    mandatoryTotal = parseInt(mandatorySkillsCount[0]?.cnt || 0);
 
-                    // Calculate score based on skills
-                    for (const skill of candidateSkills) {
-                        maxScore += 10;
-                        if (skill.ProficiencyLevel >= skill.MinProficiency) {
-                            score += 10;
-                            if (skill.IsMandatory) mandatoryMet++;
-                            criteria.push(`${skill.SkillID}: meets requirement (L${skill.ProficiencyLevel} >= L${skill.MinProficiency})`);
-                        } else {
-                            score += Math.max(0, skill.ProficiencyLevel);
-                            criteria.push(`${skill.SkillID}: partial match (L${skill.ProficiencyLevel} < L${skill.MinProficiency})`);
+                    candidateSkills.forEach(s => {
+                        if (s.ismandatory) {
+                            if ((s.proficiencylevel || 0) >= (s.minproficiency || 0)) {
+                                totalScore += 20;
+                                criteria.push(`${s.skillid}: meets requirement`);
+                            } else {
+                                mandatoryMet = false;
+                                criteria.push(`${s.skillid}: below requirement`);
+                            }
                         }
+                    });
+
+                    // Simple scoring for demo
+                    const expMet = (app.yearsofexperience || 0) >= (app.minexperience || 0);
+                    const experienceScore = expMet ? 40 : 20;
+                    criteria.push(`Experience: ${expMet ? 'meets' : 'below'} requirement`);
+
+                    const finalScore = (totalScore / (mandatoryTotal * 20 || 1) * 60) + experienceScore;
+                    const decision = mandatoryMet && finalScore >= thresholdVal ? 'Pass' : (finalScore >= thresholdVal * 0.7 ? 'Maybe' : 'Fail');
+
+                    try {
+                        await query(`
+                            INSERT INTO screeningbotdecisions 
+                            (applicationid, decision, confidence, criteriaevaluated, score, thresholdused, modelversion, decisiondate)
+                            VALUES (?, ?, ?, ?, ?, ?, 'InlineV1', NOW())
+                        `, [app.applicationid, decision, finalScore / 100, JSON.stringify(criteria), finalScore, thresholdVal]);
+                    } catch (insertErr) {
+                        console.log("Failed to insert screening decision:", insertErr.message);
                     }
-
-                    // Add experience score
-                    if (app.YearsOfExperience >= app.MinExperience) {
-                        score += 20;
-                        criteria.push(`Experience: meets requirement (${app.YearsOfExperience} >= ${app.MinExperience})`);
-                    } else {
-                        criteria.push(`Experience: below requirement (${app.YearsOfExperience} < ${app.MinExperience})`);
-                    }
-                    maxScore += 20;
-
-                    // Calculate percentage
-                    const finalScore = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-
-                    // Determine decision
-                    let decision = 'ManualReview';
-                    if (finalScore >= thresholdVal && mandatoryMet === mandatoryTotal) {
-                        decision = 'Pass';
-                    } else if (finalScore < thresholdVal / 2) {
-                        decision = 'Fail';
-                    }
-
-                    // Insert decision
-                    await query(`
-                        INSERT INTO ScreeningBotDecisions 
-                        (ApplicationID, Decision, Confidence, CriteriaEvaluated, Score, ThresholdUsed, ModelVersion, DecisionDate)
-                        VALUES (?, ?, ?, ?, ?, ?, 'InlineV1', GETDATE())
-                    `, [app.ApplicationID, decision, finalScore / 100, JSON.stringify(criteria), finalScore, thresholdVal]);
                 }
 
-                // Get the screening decision
-                const decision = await query(`
-                    SELECT TOP 1 * FROM ScreeningBotDecisions 
-                    WHERE ApplicationID = ? ORDER BY DecisionDate DESC
-                `, [app.ApplicationID]);
+                // Get the final screening decision
+                const decisionResult = await query(`
+                    SELECT * FROM screeningbotdecisions 
+                    WHERE applicationid = ? ORDER BY decisiondate DESC LIMIT 1
+                `, [app.applicationid]);
 
-                console.log(`Screening result for app ${app.ApplicationID}:`, decision[0]);
+                const dec = decisionResult[0];
+                console.log(`Screening result for app ${app.applicationid}:`, dec);
 
                 results.push({
-                    applicationID: app.ApplicationID,
-                    candidateName: app.FullName,
-                    yearsExperience: app.YearsOfExperience,
-                    screeningResult: decision[0] || null
+                    applicationID: app.applicationid,
+                    candidateName: app.fullname,
+                    yearsExperience: app.yearsofexperience,
+                    screeningResult: dec ? {
+                        decisionID: dec.decisionid,
+                        decision: dec.decision,
+                        confidence: dec.confidence,
+                        score: dec.score
+                    } : null
                 });
             } catch (screenErr) {
-                console.error("Screening Error for app:", app.ApplicationID, screenErr.message);
+                console.error("Screening Error for app:", app.applicationid, screenErr.message);
                 results.push({
-                    applicationID: app.ApplicationID,
-                    candidateName: app.FullName,
-                    yearsExperience: app.YearsOfExperience,
-                    screeningResult: null,
+                    applicationID: app.applicationid,
+                    candidateName: app.fullname,
                     error: screenErr.message
                 });
             }
@@ -480,26 +479,26 @@ router.get('/screening/decisions', protect, authorize([1, 2]), async (req, res) 
         let queryStr = `
             SELECT 
                 sbd.*,
-                a.ApplicationID,
-                c.CandidateID,
-                c.FullName,
-                j.JobID,
-                j.JobTitle,
-                s.StatusName AS CurrentStatus
-            FROM ScreeningBotDecisions sbd
-            JOIN Applications a ON sbd.ApplicationID = a.ApplicationID
-            JOIN Candidates c ON a.CandidateID = c.CandidateID
-            JOIN JobPostings j ON a.JobID = j.JobID
-            JOIN ApplicationStatus s ON a.StatusID = s.StatusID
+                a.applicationid,
+                c.candidateid,
+                c.fullname,
+                j.jobid,
+                j.jobtitle,
+                s.statusname AS currentstatus
+            FROM screeningbotdecisions sbd
+            JOIN applications a ON sbd.applicationid = a.applicationid
+            JOIN candidates c ON a.candidateid = c.candidateid
+            JOIN jobpostings j ON a.jobid = j.jobid
+            JOIN applicationstatus s ON a.statusid = s.statusid
         `;
 
         let params = [];
         if (jobID) {
-            queryStr += ` WHERE j.JobID = ?`;
+            queryStr += ` WHERE j.jobid = ?`;
             params.push(jobID);
         }
 
-        queryStr += ` ORDER BY sbd.DecisionDate DESC`;
+        queryStr += ` ORDER BY sbd.decisiondate DESC`;
 
         const decisions = await query(queryStr, params);
         res.json(decisions);
@@ -523,9 +522,9 @@ router.post('/screening/override', protect, authorize([1, 2]), async (req, res) 
 
     try {
         await query(`
-            UPDATE ScreeningBotDecisions 
-            SET HumanOverride = 1, OverrideReason = ?, FinalDecision = ?
-            WHERE DecisionID = ?
+            UPDATE screeningbotdecisions 
+            SET humanoverride = TRUE, overridereason = ?, finaldecision = ?
+            WHERE decisionid = ?
         `, [overrideReason || 'Manual override', finalDecision, decisionID]);
 
         // Also update the application status based on final decision
@@ -535,10 +534,10 @@ router.post('/screening/override', protect, authorize([1, 2]), async (req, res) 
         else if (finalDecision === 'ManualReview') newStatusID = 1; // Stay in Applied
 
         await query(`
-            UPDATE Applications 
-            SET StatusID = ?, RejectionReason = 'screening override: ' + ?
-            WHERE ApplicationID = (
-                SELECT ApplicationID FROM ScreeningBotDecisions WHERE DecisionID = ?
+            UPDATE applications 
+            SET statusid = ?, rejectionreason = 'screening override: ' || ?
+            WHERE applicationid = (
+                SELECT applicationid FROM screeningbotdecisions WHERE decisionid = ?
             )
         `, [newStatusID, overrideReason || 'No reason provided', decisionID]);
 
@@ -573,9 +572,9 @@ router.post('/screening/advance', protect, authorize([1, 2]), async (req, res) =
         for (const applicationID of applicationIDs) {
             // Get current status
             const current = await query(`
-                SELECT a.StatusID, s.StatusName FROM Applications a
-                JOIN ApplicationStatus s ON a.StatusID = s.StatusID
-                WHERE a.ApplicationID = ?
+                SELECT a.statusid, s.statusname FROM applications a
+                JOIN applicationstatus s ON a.statusid = s.statusid
+                WHERE a.applicationid = ?
             `, [applicationID]);
 
             if (current.length === 0) {
@@ -583,14 +582,14 @@ router.post('/screening/advance', protect, authorize([1, 2]), async (req, res) =
                 continue;
             }
 
-            const currentStatusID = current[0].StatusID;
+            const currentStatusID = current[0].statusid; 
 
             // Can only advance from Applied(1) or Screening(2)
             if (currentStatusID !== 1 && currentStatusID !== 2) {
                 results.push({
                     applicationID,
                     success: false,
-                    error: `Cannot advance from ${current[0].StatusName} status`
+                    error: `Cannot advance from ${current[0].statusname} status` 
                 });
                 continue;
             }
@@ -607,16 +606,16 @@ router.post('/screening/advance', protect, authorize([1, 2]), async (req, res) =
 
             // Update status
             await query(`
-                UPDATE Applications 
-                SET StatusID = ?, StatusChangedAt = GETDATE()
-                WHERE ApplicationID = ?
+                UPDATE applications 
+                SET statusid = ?, statuschangedat = NOW()
+                WHERE applicationid = ?
             `, [newStatusID, applicationID]);
 
             // Record in history
             await query(`
-                INSERT INTO ApplicationStatusHistory (ApplicationID, FromStatusID, ToStatusID, ChangedBy, ChangedAt, Notes)
-                VALUES (?, ?, ?, ?, GETDATE(), 'Advanced from Screening Bot')
-            `, [applicationID, currentStatusID, newStatusID, req.user.UserID]);
+                INSERT INTO applicationstatushistory (applicationid, fromstatusid, tostatusid, changedby, changedat, notes)
+                VALUES (?, ?, ?, ?, NOW(), 'Advanced from Screening Bot')
+            `, [applicationID, currentStatusID, newStatusID, req.user.userid]);
 
             results.push({
                 applicationID,
@@ -654,9 +653,9 @@ router.post('/screening/reject', protect, authorize([1, 2]), async (req, res) =>
         for (const applicationID of applicationIDs) {
             // Get current status
             const current = await query(`
-                SELECT a.StatusID, s.StatusName FROM Applications a
-                JOIN ApplicationStatus s ON a.StatusID = s.StatusID
-                WHERE a.ApplicationID = ?
+                SELECT a.statusid, s.statusname FROM applications a
+                JOIN applicationstatus s ON a.statusid = s.statusid
+                WHERE a.applicationid = ?
             `, [applicationID]);
 
             if (current.length === 0) {
@@ -664,30 +663,30 @@ router.post('/screening/reject', protect, authorize([1, 2]), async (req, res) =>
                 continue;
             }
 
-            const currentStatusID = current[0].StatusID;
+            const currentStatusID = current[0].statusid; 
 
             // Can only reject from Applied(1), Screening(2), or Interview(3)
             if (currentStatusID > 3) {
                 results.push({
                     applicationID,
                     success: false,
-                    error: `Cannot reject from ${current[0].StatusName} status`
+                    error: `Cannot reject from ${current[0].statusname} status` 
                 });
                 continue;
             }
 
             // Update status to Rejected(5)
             await query(`
-                UPDATE Applications 
-                SET StatusID = 5, StatusChangedAt = GETDATE(), RejectionReason = ?
-                WHERE ApplicationID = ?
+                UPDATE applications 
+                SET statusid = 5, statuschangedat = NOW(), rejectionreason = ?
+                WHERE applicationid = ?
             `, [reason || 'Rejected from Screening Bot', applicationID]);
 
             // Record in history
             await query(`
-                INSERT INTO ApplicationStatusHistory (ApplicationID, FromStatusID, ToStatusID, ChangedBy, ChangedAt, Notes)
-                VALUES (?, ?, 5, ?, GETDATE(), 'Rejected from Screening Bot')
-            `, [applicationID, currentStatusID, req.user.UserID]);
+                INSERT INTO applicationstatushistory (applicationid, fromstatusid, tostatusid, changedby, changedat, notes)
+                VALUES (?, ?, 5, ?, NOW(), 'Rejected from Screening Bot')
+            `, [applicationID, currentStatusID, req.user.userid]);
 
             results.push({
                 applicationID,
@@ -711,20 +710,21 @@ router.post('/screening/reject', protect, authorize([1, 2]), async (req, res) =>
 // MARKET ALERTS - Personalized for Recruiter
 // =========================================
 router.get('/market-alerts', protect, authorize(2), async (req, res) => {
-    const userID = req.user.UserID;
+    const userID = req.user.userid;
 
     try {
         // Get RecruiterID from UserID
-        const recruiterCheck = await query("SELECT RecruiterID, Department FROM Recruiters WHERE UserID = ?", [userID]);
+        const recruiterCheck = await query("SELECT recruiterid, department FROM recruiters WHERE userid = ?", [userID]);
         if (recruiterCheck.length === 0) {
             return res.status(403).json({ error: "Not a recruiter." });
         }
-        const recruiterId = recruiterCheck[0].RecruiterID;
-        const recruiterLocation = recruiterCheck[0].Department;
+        const recruiterId = recruiterCheck[0].recruiterid; 
+        const recruiterLocation = recruiterCheck[0].department; 
 
         // Try stored procedure first
         try {
-            const spResult = await query("EXEC sp_GenerateMarketAlerts ?", [recruiterId]);
+            // PostgreSQL Procedural call: CALL sp_GenerateMarketAlerts(?)
+            const spResult = await query("SELECT * FROM sp_generatemarketalerts(?)", [parseInt(recruiterId)]);
             if (spResult && spResult.length > 0) {
                 return res.json(spResult);
             }
@@ -738,58 +738,59 @@ router.get('/market-alerts', protect, authorize(2), async (req, res) => {
         if (recruiterLocation) {
             alerts = await query(`
                 SELECT 
-                    CASE WHEN mi.SalaryTrend IN ('Rising','Falling') THEN 'Salary Alert' ELSE 'Demand Alert' END AS AlertType,
-                    mi.SkillID,
-                    s.SkillName,
-                    mi.Location,
-                    mi.DemandScore,
-                    mi.SupplyScore,
-                    mi.DemandScore - mi.SupplyScore AS ImbalanceScore,
-                    mi.SalaryTrend,
-                    mi.AvgSalary,
-                    CONCAT('Alert for ', s.SkillName, ' in ', mi.Location, ': Trend is ', mi.SalaryTrend,
-                           '. Avg: ', FORMAT(mi.AvgSalary,'N2'), '. Imbalance: ', (mi.DemandScore - mi.SupplyScore)) AS Description,
+                    CASE WHEN mi.salarytrend IN ('Rising','Falling') THEN 'Salary Alert' ELSE 'Demand Alert' END AS alerttype,
+                    mi.skillid as skillid,
+                    s.skillname as skillname,
+                    mi.location as location,
+                    mi.demandscore as demandscore,
+                    mi.supplyscore as supplyscore,
+                    mi.demandscore - mi.supplyscore AS imbalancescore,
+                    mi.salarytrend as salarytrend,
+                    mi.avgsalary as avgsalary,
+                    CONCAT('Alert for ', s.skillname, ' in ', mi.location, ': Trend is ', mi.salarytrend,
+                           '. Avg: ', mi.avgsalary, '. Imbalance: ', (mi.demandscore - mi.supplyscore)) AS description,
                     CASE
-                        WHEN (mi.DemandScore - mi.SupplyScore) > 30 THEN 5
-                        WHEN (mi.DemandScore - mi.SupplyScore) > 15 THEN 3
+                        WHEN (mi.demandscore - mi.supplyscore) > 30 THEN 5
+                        WHEN (mi.demandscore - mi.supplyscore) > 15 THEN 3
                         ELSE 2
-                    END AS Severity,
-                    GETDATE() AS TriggeredAt,
-                    DATEADD(DAY, 30, GETDATE()) AS ExpiresAt
-                FROM MarketIntelligence mi
-                JOIN Skills s ON mi.SkillID = s.SkillID
-                WHERE mi.Location = ?
-                  AND mi.LastUpdated > DATEADD(DAY, -14, GETDATE())
-                ORDER BY Severity DESC
+                    END AS severity,
+                    NOW() AS triggeredat,
+                    NOW() + INTERVAL '30 days' AS expiresat
+                FROM marketintelligence mi
+                JOIN skills s ON mi.skillid = s.skillid
+                WHERE mi.location = ?
+                  AND mi.lastupdated > NOW() - INTERVAL '14 days'
+                ORDER BY severity DESC
             `, [recruiterLocation]);
         }
 
         // If still no alerts, get general market data
         if (alerts.length === 0) {
             alerts = await query(`
-                SELECT TOP 20
-                    CASE WHEN mi.SalaryTrend IN ('Rising','Falling') THEN 'Salary Alert' ELSE 'Demand Alert' END AS AlertType,
-                    mi.SkillID,
-                    s.SkillName,
-                    mi.Location,
-                    mi.DemandScore,
-                    mi.SupplyScore,
-                    mi.DemandScore - mi.SupplyScore AS ImbalanceScore,
-                    mi.SalaryTrend,
-                    mi.AvgSalary,
-                    CONCAT('Market Alert for ', s.SkillName, ' in ', mi.Location, ': Trend is ', mi.SalaryTrend,
-                           '. Avg: ', FORMAT(mi.AvgSalary,'N2')) AS Description,
+                SELECT 
+                    CASE WHEN mi.salarytrend IN ('Rising','Falling') THEN 'Salary Alert' ELSE 'Demand Alert' END AS alerttype,
+                    mi.skillid as skillid,
+                    s.skillname as skillname,
+                    mi.location as location,
+                    mi.demandscore as demandscore,
+                    mi.supplyscore as supplyscore,
+                    mi.demandscore - mi.supplyscore AS imbalancescore,
+                    mi.salarytrend as salarytrend,
+                    mi.avgsalary as avgsalary,
+                    CONCAT('Market Alert for ', s.skillname, ' in ', mi.location, ': Trend is ', mi.salarytrend,
+                           '. Avg: ', mi.avgsalary) AS description,
                     CASE
-                        WHEN (mi.DemandScore - mi.SupplyScore) > 30 THEN 5
-                        WHEN (mi.DemandScore - mi.SupplyScore) > 15 THEN 3
+                        WHEN (mi.demandscore - mi.supplyscore) > 30 THEN 5
+                        WHEN (mi.demandscore - mi.supplyscore) > 15 THEN 3
                         ELSE 2
-                    END AS Severity,
-                    GETDATE() AS TriggeredAt,
-                    DATEADD(DAY, 30, GETDATE()) AS ExpiresAt
-                FROM MarketIntelligence mi
-                JOIN Skills s ON mi.SkillID = s.SkillID
-                WHERE mi.LastUpdated > DATEADD(DAY, -14, GETDATE())
-                ORDER BY mi.DemandScore DESC, Severity DESC
+                    END AS severity,
+                    NOW() AS triggeredat,
+                    NOW() + INTERVAL '30 days' AS expiresat
+                FROM marketintelligence mi
+                JOIN skills s ON mi.skillid = s.skillid
+                WHERE mi.lastupdated > NOW() - INTERVAL '14 days'
+                ORDER BY demandscore DESC, severity DESC
+                LIMIT 20
             `);
         }
 
@@ -844,18 +845,18 @@ router.get('/candidate-profile/:candidateId', protect, authorize([1, 2]), async 
         try {
             const basic = await query(`
                 SELECT 
-                    c.CandidateID,
-                    c.FullName,
-                    c.Location,
-                    c.YearsOfExperience,
-                    c.ResumeText,
-                    c.ExtractedSkills,
-                    c.CreatedAt,
-                    u.Email,
-                    u.Username
-                FROM Candidates c
-                LEFT JOIN Users u ON c.UserID = u.UserID
-                WHERE c.CandidateID = ?
+                    c.candidateid as candidateid,
+                    c.fullname as fullname,
+                    c.location as location,
+                    c.yearsofexperience as yearsofexperience,
+                    c.resumetext as resumetext,
+                    c.extractedskills as extractedskills,
+                    c.createdat as createdat,
+                    u.email as email,
+                    u.username as username
+                FROM candidates c
+                LEFT JOIN users u ON c.userid = u.userid
+                WHERE c.candidateid = ?
             `, [candidateId]);
             profile.basicInfo = basic[0] || null;
         } catch (err) {
@@ -866,14 +867,14 @@ router.get('/candidate-profile/:candidateId', protect, authorize([1, 2]), async 
         try {
             const resume = await query(`
                 SELECT
-                    ResumeQualityScore,
-                    EducationInstitutions,
-                    Certifications,
-                    TechnologiesMentioned AS TechStack,
-                    LeadershipTermsCount AS LeadershipExperience,
-                    NLPProcessedAt AS LastAnalyzedAt
-                FROM ResumeInsights
-                WHERE CandidateID = ?
+                    resumequalityscore as resumequalityscore,
+                    educationinstitutions as educationinstitutions,
+                    certifications as certifications,
+                    technologiesmentioned AS techstack,
+                    leadershiptermscount AS leadershipexperience,
+                    nlpprocessedat AS lastanalyzedat
+                FROM resumeinsights
+                WHERE candidateid = ?
             `, [candidateId]);
             profile.resumeInsights = resume[0] || null;
         } catch (err) {
@@ -884,16 +885,16 @@ router.get('/candidate-profile/:candidateId', protect, authorize([1, 2]), async 
         try {
             const skills = await query(`
                 SELECT 
-                    SkillName,
-                    ClaimedLevel,
-                    VerificationScore,
-                    VerificationMethod,
-                    VerifiedAt,
-                    ExpiryDate,
-                    VerificationStatus,
-                    ValidityStatus
-                FROM vw_SkillVerificationStatus
-                WHERE CandidateID = ?
+                    skillname as skillname,
+                    claimedlevel as claimedlevel,
+                    verificationscore as verificationscore,
+                    verificationmethod as verificationmethod,
+                    verifiedat as verifiedat,
+                    expirydate as expirydate,
+                    verificationstatus as verificationstatus,
+                    validitystatus as validitystatus
+                FROM vw_skillverificationstatus
+                WHERE candidateid = ?
             `, [candidateId]);
             profile.skillVerification = skills || [];
         } catch (err) {
@@ -904,11 +905,11 @@ router.get('/candidate-profile/:candidateId', protect, authorize([1, 2]), async 
         try {
             const engagement = await query(`
                 SELECT 
-                    InterviewsScheduled,
-                    ConfirmedInterviews,
-                    EngagementRate
-                FROM vw_CandidateEngagement
-                WHERE CandidateID = ?
+                    interviewsscheduled as interviewsscheduled,
+                    confirmedinterviews as confirmedinterviews,
+                    engagementrate as engagementrate
+                FROM vw_candidateengagement
+                WHERE candidateid = ?
             `, [candidateId]);
             profile.engagement = engagement[0] || null;
         } catch (err) {
@@ -918,14 +919,15 @@ router.get('/candidate-profile/:candidateId', protect, authorize([1, 2]), async 
         // 5. Ghosting Risk
         try {
             const ghosting = await query(`
-                SELECT TOP 1
-                    CandidateGhostingScore,
-                    OverallRiskScore,
-                    OverallRiskLevel,
-                    AvgResponseTime,
-                    TotalCommunications
-                FROM vw_GhostingRiskDashboard
-                WHERE CandidateID = ?
+                SELECT 
+                    candidategostingscore as candidategostingscore,
+                    overallriskscore as overallriskscore,
+                    overallrisklevel as overallrisklevel,
+                    avgresponsetime as avgresponsetime,
+                    totalcommunications as totalcommunications
+                FROM vw_ghostingriskdashboard
+                WHERE candidateid = ?
+                LIMIT 1
             `, [candidateId]);
             profile.ghostingRisk = ghosting[0] || null;
         } catch (err) {
@@ -935,14 +937,15 @@ router.get('/candidate-profile/:candidateId', protect, authorize([1, 2]), async 
         // 6. Remote Compatibility
         try {
             const remote = await query(`
-                SELECT TOP 1
-                    OverallRemoteScore,
-                    TimezoneAlignment,
-                    WorkspaceQuality AS WorkspaceScore,
-                    CommunicationPreference AS CommunicationScore,
-                    SelfMotivationScore
-                FROM vw_RemoteCompatibilityMatrix
-                WHERE CandidateID = ?
+                SELECT 
+                    overallremotescore as overallremotescore,
+                    timezonealignment as timezonealignment,
+                    workspacequality AS workspacescore,
+                    communicationpreference AS communicationscore,
+                    selfmotivationscore as selfmotivationscore
+                FROM vw_remotecompatibilitymatrix
+                WHERE candidateid = ?
+                LIMIT 1
             `, [candidateId]);
             profile.remoteCompatibility = remote[0] || null;
         } catch (err) {
@@ -952,14 +955,15 @@ router.get('/candidate-profile/:candidateId', protect, authorize([1, 2]), async 
         // 7. Career Path Insights
         try {
             const career = await query(`
-                SELECT TOP 1
-                    TargetRole,
-                    TransitionProbability,
-                    TopSkills AS SkillsNeeded,
-                    AvgTransitionMonths AS EstimatedMonths,
-                    CurrentReadinessScore
-                FROM vw_CareerPathInsights
-                WHERE CandidateID = ?
+                SELECT 
+                    targetrole as targetrole,
+                    transitionprobability as transitionprobability,
+                    topskills AS skillsneeded,
+                    avgtransitionmonths AS estimatedmonths,
+                    currentreadinessscore as currentreadinessscore
+                FROM vw_careerpathinsights
+                WHERE candidateid = ?
+                LIMIT 1
             `, [candidateId]);
             profile.careerPath = career[0] || null;
         } catch (err) {
@@ -970,13 +974,13 @@ router.get('/candidate-profile/:candidateId', protect, authorize([1, 2]), async 
         try {
             const gamification = await query(`
                 SELECT 
-                    Points,
-                    Level,
-                    Badges,
-                    StreakDays,
-                    EngagementScore
-                FROM CandidateGamification
-                WHERE CandidateID = ?
+                    points as points,
+                    level as level,
+                    badges as badges,
+                    streakdays as streakdays,
+                    engagementscore as engagementscore
+                FROM candidategamification
+                WHERE candidateid = ?
             `, [candidateId]);
             profile.gamification = gamification[0] || null;
         } catch (err) {
@@ -987,34 +991,33 @@ router.get('/candidate-profile/:candidateId', protect, authorize([1, 2]), async 
         try {
             const predictions = await query(`
                 SELECT 
-                    p.JobID,
-                    j.JobTitle,
-                    p.SuccessProbability,
-                    p.KeyFactors,
-                    p.PredictionDate AS PredictedAt
-                FROM AI_Predictions p
-                LEFT JOIN JobPostings j ON p.JobID = j.JobID
-                WHERE p.CandidateID = ?
-                ORDER BY p.PredictionDate DESC
+                    p.jobid as jobid,
+                    j.jobtitle as jobtitle,
+                    p.successprobability as successprobability,
+                    p.keyfactors as keyfactors,
+                    p.predictiondate AS predictedat
+                FROM ai_predictions p
+                LEFT JOIN jobpostings j ON p.jobid = j.jobid
+                WHERE p.candidateid = ?
             `, [candidateId]);
             profile.predictions = predictions || [];
         } catch (err) {
-            console.log("Predictions error:", err.message);
+            console.log("AI predictions error:", err.message);
         }
 
         // 10. Blockchain Verifications
         try {
             const blockchain = await query(`
                 SELECT 
-                    CredentialType,
-                    CredentialHash,
-                    BlockchainTransactionID AS TransactionID,
-                    Network,
-                    VerifiedAt,
-                    CASE WHEN VerificationStatus = 'Verified' THEN 1 ELSE 0 END AS IsVerified
-                FROM BlockchainVerifications
-                WHERE CandidateID = ?
-                ORDER BY VerifiedAt DESC
+                    credentialtype as credentialtype,
+                    credentialhash as credentialhash,
+                    blockchaintransactionid AS transactionid,
+                    network as network,
+                    verifiedat as verifiedat,
+                    CASE WHEN verificationstatus = 'Verified' THEN TRUE ELSE FALSE END AS isverified
+                FROM blockchainverifications
+                WHERE candidateid = ?
+                ORDER BY verifiedat DESC
             `, [candidateId]);
             profile.blockchainVerifications = blockchain || [];
         } catch (err) {
@@ -1024,18 +1027,19 @@ router.get('/candidate-profile/:candidateId', protect, authorize([1, 2]), async 
         // 11. Recent Applications
         try {
             const applications = await query(`
-                SELECT TOP 10
-                    a.ApplicationID,
-                    j.JobTitle,
-                    j.Location AS JobLocation,
-                    s.StatusName,
-                    a.AppliedDate,
-                    NULL AS MatchScore
-                FROM Applications a
-                JOIN JobPostings j ON a.JobID = j.JobID
-                JOIN ApplicationStatus s ON a.StatusID = s.StatusID
-                WHERE a.CandidateID = ? AND a.IsDeleted = 0
-                ORDER BY a.AppliedDate DESC
+                SELECT 
+                    a.applicationid as applicationid,
+                    j.jobtitle as jobtitle,
+                    j.location AS joblocation,
+                    s.statusname as statusname,
+                    a.applieddate as applieddate,
+                    NULL AS matchscore
+                FROM applications a
+                JOIN jobpostings j ON a.jobid = j.jobid
+                JOIN applicationstatus s ON a.statusid = s.statusid
+                WHERE a.candidateid = ? AND a.isdeleted = FALSE
+                ORDER BY a.applieddate DESC
+                LIMIT 10
             `, [candidateId]);
             profile.applications = applications || [];
         } catch (err) {
@@ -1046,23 +1050,23 @@ router.get('/candidate-profile/:candidateId', protect, authorize([1, 2]), async 
         try {
             const interviews = await query(`
                 SELECT 
-                    i.ScheduleID,
-                    j.JobTitle,
-                    u.Username AS RecruiterName,
-                    i.InterviewStart,
-                    i.InterviewEnd,
-                    i.CandidateConfirmed,
+                    i.scheduleid as scheduleid,
+                    j.jobtitle as jobtitle,
+                    u.username AS recruitername,
+                    i.interviewstart as interviewstart,
+                    i.interviewend as interviewend,
+                    i.candidateconfirmed as candidateconfirmed,
                     CASE 
-                        WHEN i.InterviewStart < GETDATE() THEN 'Past'
+                        WHEN i.interviewstart < NOW() THEN 'Past'
                         ELSE 'Upcoming'
-                    END AS TimeStatus
-                FROM InterviewSchedules i
-                JOIN Applications a ON i.ApplicationID = a.ApplicationID
-                JOIN JobPostings j ON a.JobID = j.JobID
-                JOIN Recruiters r ON i.RecruiterID = r.RecruiterID
-                JOIN Users u ON r.UserID = u.UserID
-                WHERE a.CandidateID = ?
-                ORDER BY i.InterviewStart DESC
+                    END AS timestatus
+                FROM interviewschedules i
+                JOIN applications a ON i.applicationid = a.applicationid
+                JOIN jobpostings j ON a.jobid = j.jobid
+                JOIN recruiters r ON i.recruiterid = r.recruiterid
+                JOIN users u ON r.userid = u.userid
+                WHERE a.candidateid = ?
+                ORDER BY i.interviewstart DESC
             `, [candidateId]);
             profile.interviews = interviews || [];
         } catch (err) {
@@ -1103,15 +1107,15 @@ router.get('/referral-intelligence', protect, authorize([1, 2]), async (req, res
         try {
             const summary = await query(`
                 SELECT 
-                    COUNT(*) AS TotalReferrals,
-                    SUM(CASE WHEN HireResult = 1 THEN 1 ELSE 0 END) AS SuccessfulHires,
-                    SUM(CASE WHEN HireResult IS NULL THEN 1 ELSE 0 END) AS PendingReferrals,
-                    CAST(SUM(CASE WHEN HireResult = 1 THEN 1 ELSE 0 END) * 100.0 / 
-                         NULLIF(COUNT(CASE WHEN HireResult IS NOT NULL THEN 1 END), 0) AS DECIMAL(5,2)) AS SuccessRate,
-                    AVG(CAST(QualityScore AS FLOAT)) AS AvgQualityScore,
-                    SUM(CASE WHEN BonusAmount IS NOT NULL THEN BonusAmount ELSE 0 END) AS TotalBonusPaid,
-                    COUNT(DISTINCT ReferrerID) AS ActiveReferrers
-                FROM ReferralNetwork
+                    COUNT(*) AS totalreferrals,
+                    SUM(CASE WHEN hireresult = TRUE THEN 1 ELSE 0 END) AS successfulhires,
+                    SUM(CASE WHEN hireresult IS NULL THEN 1 ELSE 0 END) AS pendingreferrals,
+                    CAST(SUM(CASE WHEN hireresult = TRUE THEN 1 ELSE 0 END) * 100.0 / 
+                         NULLIF(COUNT(CASE WHEN hireresult IS NOT NULL THEN 1 END), 0) AS DECIMAL(5,2)) AS successrate,
+                    AVG(CAST(qualityscore AS FLOAT)) AS avgqualityscore,
+                    SUM(CASE WHEN bonusamount IS NOT NULL THEN bonusamount ELSE 0 END) AS totalbonuspaid,
+                    COUNT(DISTINCT referrerid) AS activereferrers
+                FROM referralnetwork
             `);
             data.summary = summary[0] || null;
         } catch (err) {
@@ -1121,17 +1125,18 @@ router.get('/referral-intelligence', protect, authorize([1, 2]), async (req, res
         // 2. Top Referrers Leaderboard
         try {
             const topReferrers = await query(`
-                SELECT TOP 10
-                    c.CandidateID AS ReferrerID,
-                    c.FullName AS ReferrerName,
-                    rp.TotalReferrals,
-                    rp.SuccessfulReferrals,
-                    rp.ConversionRate,
-                    rp.AvgQualityScore,
-                    rp.TotalBonusEarned
-                FROM ReferralPerformance rp
-                JOIN Candidates c ON rp.ReferrerID = c.CandidateID
-                ORDER BY rp.SuccessfulReferrals DESC, rp.TotalReferrals DESC
+                SELECT 
+                    c.candidateid AS referrerid,
+                    c.fullname AS referrername,
+                    rp.totalreferrals as totalreferrals,
+                    rp.successfulreferrals as successfulreferrals,
+                    rp.conversionrate as conversionrate,
+                    rp.avgqualityscore as avgqualityscore,
+                    rp.totalbonusearned as totalbonusearned
+                FROM referralperformance rp
+                JOIN candidates c ON rp.referrerid = c.candidateid
+                ORDER BY rp.successfulreferrals DESC, rp.totalreferrals DESC
+                LIMIT 10
             `);
             data.topReferrers = topReferrers || [];
         } catch (err) {
@@ -1141,31 +1146,32 @@ router.get('/referral-intelligence', protect, authorize([1, 2]), async (req, res
         // 3. Recent Referrals with Outcomes
         try {
             const recentReferrals = await query(`
-                SELECT TOP 20
-                    r.ReferralID,
-                    c1.FullName AS ReferrerName,
-                    c2.FullName AS ReferredCandidateName,
-                    j.JobTitle,
-                    r.RelationshipType,
-                    r.ReferralStrength,
-                    r.ReferralDate,
-                    r.HireResult,
-                    r.QualityScore,
-                    r.BonusAmount,
+                SELECT 
+                    r.referralid as referralid,
+                    c1.fullname AS referrername,
+                    c2.fullname AS referredcandidatename,
+                    j.jobtitle as jobtitle,
+                    r.relationshiptype as relationshiptype,
+                    r.referralstrength as referralstrength,
+                    r.referraldate as referraldate,
+                    r.hireresult as hireresult,
+                    r.qualityscore as qualityscore,
+                    r.bonusamount as bonusamount,
                     CASE 
-                        WHEN r.HireResult = 1 THEN 'Successful'
-                        WHEN r.HireResult = 0 THEN 'Unsuccessful'
+                        WHEN r.hireresult = TRUE THEN 'Successful'
+                        WHEN r.hireresult = FALSE THEN 'Unsuccessful'
                         ELSE 'Pending'
-                    END AS Outcome,
-                    ns.ConnectionStrength,
-                    ns.TrustLevel
-                FROM ReferralNetwork r
-                JOIN Candidates c1 ON r.ReferrerID = c1.CandidateID
-                JOIN Candidates c2 ON r.ReferredCandidateID = c2.CandidateID
-                JOIN JobPostings j ON r.JobID = j.JobID
-                LEFT JOIN NetworkStrength ns ON r.ReferrerID = ns.CandidateID 
-                    AND r.ReferredCandidateID = ns.ConnectionID
-                ORDER BY r.ReferralDate DESC
+                    END AS outcome,
+                    ns.connectionstrength as connectionstrength,
+                    ns.trustlevel as trustlevel
+                FROM referralnetwork r
+                JOIN candidates c1 ON r.referrerid = c1.candidateid
+                JOIN candidates c2 ON r.referredcandidateid = c2.candidateid
+                JOIN jobpostings j ON r.jobid = j.jobid
+                LEFT JOIN networkstrength ns ON r.referrerid = ns.candidateid 
+                    AND r.referredcandidateid = ns.connectionid
+                ORDER BY r.referraldate DESC
+                LIMIT 20
             `);
             data.recentReferrals = recentReferrals || [];
         } catch (err) {
@@ -1174,23 +1180,20 @@ router.get('/referral-intelligence', protect, authorize([1, 2]), async (req, res
 
         // 4. Referral Suggestions (using sp_SuggestReferrals)
         try {
-            // Get a sample of candidates who could refer
             const suggestions = await query(`
-                SELECT TOP 10
-                    c.CandidateID,
-                    c.FullName,
-                    c.Location,
-                    c.YearsOfExperience,
-                    (SELECT COUNT(*) FROM NetworkStrength ns WHERE ns.CandidateID = c.CandidateID) AS NetworkSize,
-                    (SELECT STRING_AGG(s.SkillName, ', ') 
-                     FROM CandidateSkills cs 
-                     JOIN Skills s ON cs.SkillID = s.SkillID 
-                     WHERE cs.CandidateID = c.CandidateID) AS Skills
-                FROM Candidates c
-                WHERE EXISTS (
-                    SELECT 1 FROM NetworkStrength ns WHERE ns.CandidateID = c.CandidateID
-                )
-                ORDER BY (SELECT COUNT(*) FROM NetworkStrength ns WHERE ns.CandidateID = c.CandidateID) DESC
+                SELECT 
+                    c.candidateid, 
+                    c.fullname, 
+                    c.location, 
+                    c.yearsofexperience,
+                    (SELECT STRING_AGG(s.skillname, ', ') 
+                     FROM candidateskills cs 
+                     JOIN skills s ON cs.skillid = s.skillid 
+                     WHERE cs.candidateid = c.candidateid) as skills
+                FROM candidates c
+                WHERE c.userid IN (SELECT userid FROM users WHERE isactive = TRUE)
+                ORDER BY c.yearsofexperience DESC
+                LIMIT 10
             `);
             data.referralSuggestions = suggestions || [];
         } catch (err) {
@@ -1201,17 +1204,17 @@ router.get('/referral-intelligence', protect, authorize([1, 2]), async (req, res
         try {
             const networkAnalysis = await query(`
                 SELECT 
-                    c.CandidateID,
-                    c.FullName,
-                    COUNT(ns.ConnectionID) AS TotalConnections,
-                    AVG(CAST(ns.ConnectionStrength AS FLOAT)) AS AvgConnectionStrength,
-                    SUM(CASE WHEN ns.ConnectionStrength >= 8 THEN 1 ELSE 0 END) AS HighTrustConnections,
-                    MAX(ns.LastInteraction) AS LastNetworkInteraction
-                FROM Candidates c
-                JOIN NetworkStrength ns ON c.CandidateID = ns.CandidateID
-                GROUP BY c.CandidateID, c.FullName
-                HAVING COUNT(ns.ConnectionID) >= 1
-                ORDER BY TotalConnections DESC
+                    c.candidateid as candidateid,
+                    c.fullname as fullname,
+                    COUNT(ns.connectionid) AS totalconnections,
+                    AVG(CAST(ns.connectionstrength AS FLOAT)) AS avgconnectionstrength,
+                    SUM(CASE WHEN ns.connectionstrength >= 8 THEN 1 ELSE 0 END) AS hightrustconnections,
+                    MAX(ns.lastnetworkinteraction) AS lastnetworkinteraction
+                FROM candidates c
+                JOIN networkstrength ns ON c.candidateid = ns.candidateid
+                GROUP BY c.candidateid, c.fullname
+                HAVING COUNT(ns.connectionid) >= 1
+                ORDER BY totalconnections DESC
             `);
             data.networkAnalysis = networkAnalysis || [];
         } catch (err) {
@@ -1222,15 +1225,15 @@ router.get('/referral-intelligence', protect, authorize([1, 2]), async (req, res
         try {
             const outcomeBreakdown = await query(`
                 SELECT 
-                    RelationshipType,
-                    COUNT(*) AS TotalReferrals,
-                    SUM(CASE WHEN HireResult = 1 THEN 1 ELSE 0 END) AS Successful,
-                    SUM(CASE WHEN HireResult = 0 THEN 1 ELSE 0 END) AS Unsuccessful,
-                    SUM(CASE WHEN HireResult IS NULL THEN 1 ELSE 0 END) AS Pending,
-                    AVG(CAST(QualityScore AS FLOAT)) AS AvgQualityScore
-                FROM ReferralNetwork
-                GROUP BY RelationshipType
-                ORDER BY TotalReferrals DESC
+                    relationshiptype as relationshiptype,
+                    COUNT(*) AS totalreferrals,
+                    SUM(CASE WHEN hireresult = TRUE THEN 1 ELSE 0 END) AS successful,
+                    SUM(CASE WHEN hireresult = FALSE THEN 1 ELSE 0 END) AS unsuccessful,
+                    SUM(CASE WHEN hireresult IS NULL THEN 1 ELSE 0 END) AS pending,
+                    AVG(CAST(qualityscore AS FLOAT)) AS avgqualityscore
+                FROM referralnetwork
+                GROUP BY relationshiptype
+                ORDER BY totalreferrals DESC
             `);
             data.outcomeBreakdown = outcomeBreakdown || [];
         } catch (err) {
@@ -1248,8 +1251,6 @@ router.get('/referral-intelligence', protect, authorize([1, 2]), async (req, res
  * @route   GET /api/recruiters/referral-suggestions/:jobId
  * @desc    Get referral suggestions for a specific job using sp_SuggestReferrals stored procedure
  * @access  Private (Recruiter/Admin)
- * 
- * Returns potential referrers with their network connections and fit scores for the specified job
  */
 router.get('/referral-suggestions/:jobId', protect, authorize([1, 2]), async (req, res) => {
     const { jobId } = req.params;
@@ -1259,13 +1260,11 @@ router.get('/referral-suggestions/:jobId', protect, authorize([1, 2]), async (re
     }
 
     try {
-        // Call the stored procedure sp_SuggestReferrals
-        const suggestions = await query("EXEC sp_SuggestReferrals @JobID = ?", [parseInt(jobId)]);
+        const suggestions = await query("SELECT * FROM sp_suggestreferrals(?)", [parseInt(jobId)]);
 
-        // Parse the PotentialReferrals JSON field if it exists
         const processedSuggestions = suggestions.map(s => ({
             ...s,
-            PotentialReferrals: s.PotentialReferrals ? JSON.parse(s.PotentialReferrals) : []
+            potentialreferrals: s.potentialreferrals ? (typeof s.potentialreferrals === 'string' ? JSON.parse(s.potentialreferrals) : s.potentialreferrals) : []
         }));
 
         res.json(processedSuggestions);
@@ -1277,8 +1276,7 @@ router.get('/referral-suggestions/:jobId', protect, authorize([1, 2]), async (re
 
 /**
  * @route   POST /api/recruiters/send-reminder
- * @desc    Send a reminder to a candidate - creates a notification (matches notification trigger schema)
- * @access  Private (Recruiter/Admin)
+ * @desc    Send a reminder to a candidate
  */
 router.post('/send-reminder', protect, authorize([1, 2]), async (req, res) => {
     const { candidateId, jobId, message } = req.body;
@@ -1288,9 +1286,8 @@ router.post('/send-reminder', protect, authorize([1, 2]), async (req, res) => {
     }
 
     try {
-        // Get candidate info
         const candidateResult = await query(
-            "SELECT CandidateID, UserID, FullName FROM Candidates WHERE CandidateID = ?",
+            "SELECT candidateid as candidateid, userid as userid, fullname as fullname FROM candidates WHERE candidateid = ?",
             [candidateId]
         );
 
@@ -1299,20 +1296,18 @@ router.post('/send-reminder', protect, authorize([1, 2]), async (req, res) => {
         }
 
         const candidate = candidateResult[0];
-        const candidateUserId = candidate.UserID;
-        const candidateName = candidate.FullName;
+        const candidateUserId = candidate.userid;
+        const candidateName = candidate.fullname;
 
-        // Check if candidate has a UserID (required for notifications)
         if (!candidateUserId) {
             return res.status(400).json({ error: "Candidate does not have a linked user account." });
         }
 
-        // Insert notification using the same schema as the triggers (UserID, Title, Body, NotificationType, SentAt, DataPayload)
-        const dataPayload = jobId ? `{"applicationId": ${jobId}}` : null;
+        const dataPayload = jobId ? JSON.stringify({ applicationId: jobId }) : null;
 
         await query(`
-            INSERT INTO PushNotifications (UserID, Title, Body, NotificationType, SentAt, DataPayload)
-            VALUES (?, 'Follow-up Reminder', ?, 'Reminder', GETDATE(), ?)
+            INSERT INTO pushnotifications (userid, title, body, notificationtype, sentat, datapayload)
+            VALUES (?, 'Follow-up Reminder', ?, 'Reminder', NOW(), ?)
         `, [candidateUserId, message, dataPayload]);
 
         res.status(201).json({
@@ -1327,11 +1322,6 @@ router.post('/send-reminder', protect, authorize([1, 2]), async (req, res) => {
 
 /**
  * @route   GET /api/recruiters/background-checks/:candidateId
- * @desc    Get background checks for a candidate
- * @access  Private (Recruiter/Admin)
- * 
- * Returns: CheckID, CandidateID, FullName, CheckType, Vendor, Status, Result, RiskLevel, 
- *          InitiatedAt, CompletedAt, Findings, ReportURL, Cost, TurnaroundDays
  */
 router.get('/background-checks/:candidateId', protect, authorize([1, 2]), async (req, res) => {
     const { candidateId } = req.params;
@@ -1340,54 +1330,31 @@ router.get('/background-checks/:candidateId', protect, authorize([1, 2]), async 
     try {
         let queryStr = `
             SELECT 
-                bc.CheckID,
-                bc.CandidateID,
-                c.FullName,
-                bc.CheckType,
-                bc.Vendor,
-                bc.RequestID,
-                bc.Status,
-                bc.Result,
-                bc.Findings,
-                bc.RiskLevel,
-                bc.InitiatedAt,
-                bc.CompletedAt,
-                bc.ReportURL,
-                bc.Cost,
-                bc.TurnaroundDays,
-                bc.Notes,
-                bc.ComplianceVerified
-            FROM BackgroundChecks bc
-            JOIN Candidates c ON bc.CandidateID = c.CandidateID
-            WHERE bc.CandidateID = ?
+                bc.checkid as checkid, bc.candidateid as candidateid, c.fullname as fullname,
+                bc.checktype as checktype, bc.vendor as vendor, bc.requestid as requestid,
+                bc.status as status, bc.result as result, bc.findings as findings,
+                bc.risklevel as risklevel, bc.initiatedat as initiatedat, bc.completedat as completedat,
+                bc.reporturl as reporturl, bc.cost as cost, bc.turnarounddays as turnarounddays,
+                bc.notes as notes, bc.complianceverified as complianceverified
+            FROM backgroundchecks bc
+            JOIN candidates c ON bc.candidateid = c.candidateid
+            WHERE bc.candidateid = ?
         `;
-
         const params = [candidateId];
-
-        if (checkType) {
-            queryStr += ` AND bc.CheckType = ?`;
-            params.push(checkType);
-        }
-
-        if (status) {
-            queryStr += ` AND bc.Status = ?`;
-            params.push(status);
-        }
-
-        queryStr += ` ORDER BY bc.InitiatedAt DESC`;
+        if (checkType) { queryStr += ` AND bc.checktype = ?`; params.push(checkType); }
+        if (status) { queryStr += ` AND bc.status = ?`; params.push(status); }
+        queryStr += ` ORDER BY bc.initiatedat DESC`;
 
         const checks = await query(queryStr, params);
         res.json(checks);
     } catch (err) {
         console.error("Background Checks Fetch Error:", err.message);
-        res.status(500).json({ error: "Failed to fetch background checks: " + err.message });
+        res.status(500).json({ error: "Failed to fetch background checks." });
     }
 });
 
 /**
  * @route   POST /api/recruiters/background-checks
- * @desc    Initiate a new background check for a candidate
- * @access  Private (Recruiter/Admin)
  */
 router.post('/background-checks', protect, authorize([1, 2]), async (req, res) => {
     const { candidateId, checkType, vendor, notes } = req.body;
@@ -1407,13 +1374,14 @@ router.post('/background-checks', protect, authorize([1, 2]), async (req, res) =
         const requestID = `BC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
         const result = await query(`
-            INSERT INTO BackgroundChecks (CandidateID, CheckType, Vendor, RequestID, Status, Notes)
+            INSERT INTO backgroundchecks (candidateid, checktype, vendor, requestid, status, notes)
             VALUES (?, ?, ?, ?, 'Requested', ?)
+            RETURNING checkid
         `, [candidateId, checkType, vendor || 'Internal', requestID, notes]);
 
         res.status(201).json({
             message: "Background check initiated successfully.",
-            checkId: result.insertId,
+            checkId: result[0].checkid, 
             requestId: requestID,
             status: "Requested"
         });
@@ -1447,52 +1415,53 @@ router.put('/background-checks/:checkId', protect, authorize([1, 2]), async (req
         const updateParams = [];
 
         if (status) {
-            updateFields.push('Status = ?');
+            updateFields.push('status = ?');
             updateParams.push(status);
         }
         if (result) {
-            updateFields.push('Result = ?');
+            updateFields.push('result = ?');
             updateParams.push(result);
         }
         if (findings !== undefined) {
-            updateFields.push('Findings = ?');
+            updateFields.push('findings = ?');
             updateParams.push(findings);
         }
         if (riskLevel) {
-            updateFields.push('RiskLevel = ?');
+            updateFields.push('risklevel = ?');
             updateParams.push(riskLevel);
         }
         if (reportURL) {
-            updateFields.push('ReportURL = ?');
+            updateFields.push('reporturl = ?');
             updateParams.push(reportURL);
         }
         if (cost) {
-            updateFields.push('Cost = ?');
+            updateFields.push('cost = ?');
             updateParams.push(cost);
         }
         if (turnaroundDays) {
-            updateFields.push('TurnaroundDays = ?');
+            updateFields.push('turnarounddays = ?');
             updateParams.push(turnaroundDays);
         }
         if (notes) {
-            updateFields.push('Notes = ?');
+            updateFields.push('notes = ?');
             updateParams.push(notes);
         }
         if (status === 'Completed' || status === 'Cleared' || status === 'Adverse') {
-            updateFields.push('CompletedAt = GETDATE()');
+            updateFields.push('completedat = NOW()');
         }
 
-        updateParams.push(checkId);
+        updateFields.push('lastchecked = NOW()');
+        updateParams.push(checkId); // Add checkId to params for WHERE clause
 
         await query(`
-            UPDATE BackgroundChecks 
+            UPDATE backgroundchecks 
             SET ${updateFields.join(', ')}
-            WHERE CheckID = ?
+            WHERE checkid = ?
         `, updateParams);
 
         res.json({
             message: "Background check updated successfully.",
-            checkId: parseInt(checkId),
+            checkid: parseInt(checkId),
             status: status
         });
     } catch (err) {
@@ -1511,46 +1480,46 @@ router.get('/background-checks-dashboard', protect, authorize([1, 2]), async (re
         // Summary stats
         const summary = await query(`
             SELECT 
-                COUNT(*) AS TotalChecks,
-                SUM(CASE WHEN Status = 'Requested' THEN 1 ELSE 0 END) AS Pending,
-                SUM(CASE WHEN Status = 'InProgress' THEN 1 ELSE 0 END) AS InProgress,
-                SUM(CASE WHEN Status = 'Completed' OR Status = 'Cleared' THEN 1 ELSE 0 END) AS Completed,
-                SUM(CASE WHEN Status = 'Failed' OR Status = 'Adverse' THEN 1 ELSE 0 END) AS Failed,
-                SUM(CASE WHEN Result = 'Clear' THEN 1 ELSE 0 END) AS Cleared,
-                SUM(CASE WHEN Result = 'Adverse' THEN 1 ELSE 0 END) AS Adverse,
-                SUM(CASE WHEN Result = 'Consider' THEN 1 ELSE 0 END) AS Consider,
-                AVG(CAST(Cost AS FLOAT)) AS AvgCost,
-                AVG(CAST(TurnaroundDays AS FLOAT)) AS AvgTurnaroundDays,
-                SUM(CAST(Cost AS FLOAT)) AS TotalCost
-            FROM BackgroundChecks
+                COUNT(*) AS totalchecks,
+                SUM(CASE WHEN status = 'Requested' THEN 1 ELSE 0 END) AS pending,
+                SUM(CASE WHEN status = 'InProgress' THEN 1 ELSE 0 END) AS inprogress,
+                SUM(CASE WHEN status = 'Completed' OR status = 'Cleared' THEN 1 ELSE 0 END) AS completed,
+                SUM(CASE WHEN status = 'Failed' OR status = 'Adverse' THEN 1 ELSE 0 END) AS failed,
+                SUM(CASE WHEN result = 'Clear' THEN 1 ELSE 0 END) AS cleared,
+                SUM(CASE WHEN result = 'Adverse' THEN 1 ELSE 0 END) AS adverse,
+                SUM(CASE WHEN result = 'Consider' THEN 1 ELSE 0 END) AS consider,
+                AVG(CAST(cost AS FLOAT)) AS avgcost,
+                AVG(CAST(turnarounddays AS FLOAT)) AS avgturnarounddays,
+                SUM(CAST(cost AS FLOAT)) AS totalcost
+            FROM backgroundchecks
         `);
 
         // Checks by type
         const byType = await query(`
             SELECT 
-                CheckType,
-                COUNT(*) AS Count,
-                SUM(CASE WHEN Status = 'Completed' OR Status = 'Cleared' THEN 1 ELSE 0 END) AS Completed
-            FROM BackgroundChecks
-            GROUP BY CheckType
-            ORDER BY Count DESC
+                checktype as checktype,
+                COUNT(*) AS count,
+                SUM(CASE WHEN status = 'Completed' OR status = 'Cleared' THEN 1 ELSE 0 END) AS completed
+            FROM backgroundchecks
+            GROUP BY checktype
+            ORDER BY count DESC
         `);
 
         // Recent checks
         const recent = await query(`
-            SELECT TOP 10
-                bc.CheckID,
-                bc.CandidateID,
-                c.FullName,
-                bc.CheckType,
-                bc.Status,
-                bc.Result,
-                bc.RiskLevel,
-                bc.InitiatedAt,
-                bc.CompletedAt
-            FROM BackgroundChecks bc
-            JOIN Candidates c ON bc.CandidateID = c.CandidateID
-            ORDER BY bc.InitiatedAt DESC
+            SELECT 
+                bc.checkid as checkid,
+                bc.candidateid as candidateid,
+                c.fullname as fullname,
+                bc.checktype as checktype,
+                bc.status as status,
+                bc.result as result,
+                bc.initiatedat as initiatedat,
+                bc.completedat as completedat
+            FROM backgroundchecks bc
+            JOIN candidates c ON bc.candidateid = c.candidateid
+            ORDER BY bc.initiatedat DESC
+            LIMIT 10
         `);
 
         res.json({
@@ -1576,39 +1545,38 @@ router.get('/blockchain-verifications/:candidateId', protect, authorize([1, 2]),
     try {
         let queryStr = `
             SELECT 
-                bv.VerificationID,
-                bv.CandidateID,
-                c.FullName,
-                bv.CredentialType,
-                bv.IssuingAuthority,
-                bv.CredentialHash,
-                bv.BlockchainTransactionID,
-                bv.BlockNumber,
-                bv.Network,
-                bv.VerifiedAt,
-                bv.IsImmutable,
-                bv.VerificationCost,
-                bv.VerificationStatus,
-                bv.LastChecked,
-                bv.Metadata
-            FROM BlockchainVerifications bv
-            JOIN Candidates c ON bv.CandidateID = c.CandidateID
-            WHERE bv.CandidateID = ?
+                bv.verificationid as verificationid,
+                bv.candidateid as candidateid,
+                c.fullname as fullname,
+                bv.credentialtype as credentialtype,
+                bv.issuingauthority as issuingauthority,
+                bv.credentialhash as credentialhash,
+                bv.blockchaintransactionid as blockchaintransactionid,
+                bv.blocknumber as blocknumber,
+                bv.network as network,
+                bv.verifiedat as verifiedat,
+                bv.isimmutable as isimmutable,
+                bv.verificationcost as verificationcost,
+                bv.verificationstatus as verificationstatus,
+                bv.metadata as metadata
+            FROM blockchainverifications bv
+            JOIN candidates c ON bv.candidateid = c.candidateid
+            WHERE bv.candidateid = ?
         `;
 
         const params = [candidateId];
 
         if (credentialType) {
-            queryStr += ` AND bv.CredentialType = ?`;
+            queryStr += ` AND bv.credentialtype = ?`;
             params.push(credentialType);
         }
 
         if (status) {
-            queryStr += ` AND bv.VerificationStatus = ?`;
+            queryStr += ` AND bv.verificationstatus = ?`;
             params.push(status);
         }
 
-        queryStr += ` ORDER BY bv.LastChecked DESC`;
+        queryStr += ` ORDER BY bv.lastchecked DESC`;
 
         const verifications = await query(queryStr, params);
         res.json(verifications);
@@ -1646,14 +1614,15 @@ router.post('/blockchain-verifications', protect, authorize([1, 2]), async (req,
         const transactionID = `0x${credentialHash.substring(0, 16)}...${credentialHash.substring(credentialHash.length - 8)}`;
 
         const result = await query(`
-            INSERT INTO BlockchainVerifications 
-            (CandidateID, CredentialType, IssuingAuthority, CredentialHash, BlockchainTransactionID, Network, VerificationStatus, Metadata)
+            INSERT INTO blockchainverifications 
+            (candidateid, credentialtype, issuingauthority, credentialhash, blockchaintransactionid, network, verificationstatus, metadata)
             VALUES (?, ?, ?, ?, ?, 'Ethereum', 'Pending', ?)
+            RETURNING verificationid as verificationid
         `, [candidateId, credentialType, issuingAuthority, credentialHash, transactionID, metadata || null]);
 
         res.status(201).json({
             message: "Credential submitted for blockchain verification.",
-            verificationId: result.insertId,
+            verificationid: result[0].verificationid,
             credentialHash: credentialHash,
             transactionId: transactionID,
             status: "Pending"
@@ -1688,38 +1657,38 @@ router.put('/blockchain-verifications/:verificationId', protect, authorize([1, 2
         const updateParams = [];
 
         if (verificationStatus) {
-            updateFields.push('VerificationStatus = ?');
+            updateFields.push('verificationstatus = ?');
             updateParams.push(verificationStatus);
         }
         if (blockchainTransactionID) {
-            updateFields.push('BlockchainTransactionID = ?');
+            updateFields.push('blockchaintransactionid = ?');
             updateParams.push(blockchainTransactionID);
         }
         if (blockNumber) {
-            updateFields.push('BlockNumber = ?');
+            updateFields.push('blocknumber = ?');
             updateParams.push(blockNumber);
         }
         if (metadata) {
-            updateFields.push('Metadata = ?');
+            updateFields.push('metadata = ?');
             updateParams.push(metadata);
         }
         if (verificationStatus === 'Verified') {
-            updateFields.push('VerifiedAt = GETDATE()');
-            updateFields.push('IsImmutable = 1');
+            updateFields.push('verifiedat = NOW()');
+            updateFields.push('isimmutable = TRUE');
         }
 
-        updateFields.push('LastChecked = GETDATE()');
-        updateParams.push(verificationId);
+        updateFields.push('lastchecked = NOW()');
+        updateParams.push(verificationId); // Add verificationId to params for WHERE clause
 
         await query(`
-            UPDATE BlockchainVerifications 
+            UPDATE blockchainverifications 
             SET ${updateFields.join(', ')}
-            WHERE VerificationID = ?
+            WHERE verificationid = ?
         `, updateParams);
 
         res.json({
             message: "Blockchain verification updated successfully.",
-            verificationId: parseInt(verificationId),
+            verificationid: parseInt(verificationId),
             status: verificationStatus
         });
     } catch (err) {
@@ -1738,26 +1707,25 @@ router.get('/blockchain-dashboard', protect, authorize([1, 2]), async (req, res)
         // Check if table exists
         let tableExists = false;
         try {
-            await query("SELECT 1 FROM BlockchainVerifications WHERE 1=0");
+            await query("SELECT 1 FROM blockchainverifications WHERE 1=0");
             tableExists = true;
         } catch (tableErr) {
             tableExists = false;
         }
 
         if (!tableExists) {
-            // Return empty data if table doesn't exist
             return res.json({
                 summary: {
-                    TotalVerifications: 0,
-                    Pending: 0,
-                    Verified: 0,
-                    Failed: 0,
-                    Degrees: 0,
-                    Certificates: 0,
-                    Employment: 0,
-                    Identity: 0,
-                    TotalCost: 0,
-                    AvgCost: 0
+                    totalverifications: 0,
+                    pending: 0,
+                    verified: 0,
+                    failed: 0,
+                    degrees: 0,
+                    certificates: 0,
+                    employment: 0,
+                    identity: 0,
+                    totalcost: 0,
+                    avgcost: 0
                 },
                 byType: [],
                 recent: []
@@ -1767,45 +1735,44 @@ router.get('/blockchain-dashboard', protect, authorize([1, 2]), async (req, res)
         // Summary stats
         const summary = await query(`
             SELECT 
-                COUNT(*) AS TotalVerifications,
-                SUM(CASE WHEN VerificationStatus = 'Pending' THEN 1 ELSE 0 END) AS Pending,
-                SUM(CASE WHEN VerificationStatus = 'Verified' THEN 1 ELSE 0 END) AS Verified,
-                SUM(CASE WHEN VerificationStatus = 'Failed' THEN 1 ELSE 0 END) AS Failed,
-                SUM(CASE WHEN CredentialType = 'Degree' THEN 1 ELSE 0 END) AS Degrees,
-                SUM(CASE WHEN CredentialType = 'Certificate' THEN 1 ELSE 0 END) AS Certificates,
-                SUM(CASE WHEN CredentialType = 'Employment' THEN 1 ELSE 0 END) AS Employment,
-                SUM(CASE WHEN CredentialType = 'Identity' THEN 1 ELSE 0 END) AS Identity,
-                SUM(CAST(VerificationCost AS FLOAT)) AS TotalCost,
-                AVG(CAST(VerificationCost AS FLOAT)) AS AvgCost
-            FROM BlockchainVerifications
+                COUNT(*) AS totalverifications,
+                SUM(CASE WHEN verificationstatus = 'Pending' THEN 1 ELSE 0 END) AS pending,
+                SUM(CASE WHEN verificationstatus = 'Verified' THEN 1 ELSE 0 END) AS verified,
+                SUM(CASE WHEN verificationstatus = 'Failed' THEN 1 ELSE 0 END) AS failed,
+                SUM(CASE WHEN credentialtype = 'Degree' THEN 1 ELSE 0 END) AS degrees,
+                SUM(CASE WHEN credentialtype = 'Certificate' THEN 1 ELSE 0 END) AS certificates,
+                SUM(CASE WHEN credentialtype = 'Employment' THEN 1 ELSE 0 END) AS employment,
+                SUM(CASE WHEN credentialtype = 'Identity' THEN 1 ELSE 0 END) AS identity,
+                SUM(CAST(verificationcost AS FLOAT)) AS totalcost,
+                AVG(CAST(verificationcost AS FLOAT)) AS avgcost
+            FROM blockchainverifications
         `);
 
         // Verifications by type
         const byType = await query(`
             SELECT 
-                CredentialType,
-                COUNT(*) AS Count,
-                SUM(CASE WHEN VerificationStatus = 'Verified' THEN 1 ELSE 0 END) AS Verified
-            FROM BlockchainVerifications
-            GROUP BY CredentialType
-            ORDER BY Count DESC
+                credentialtype as credentialtype,
+                COUNT(*) AS count,
+                SUM(CASE WHEN verificationstatus = 'Verified' THEN 1 ELSE 0 END) AS verified
+            FROM blockchainverifications
+            GROUP BY credentialtype
+            ORDER BY count DESC
         `);
 
         // Recent verifications
         const recent = await query(`
-            SELECT TOP 10
-                bv.VerificationID,
-                bv.CandidateID,
-                c.FullName,
-                bv.CredentialType,
-                bv.IssuingAuthority,
-                bv.VerificationStatus,
-                bv.VerifiedAt,
-                bv.BlockchainTransactionID,
-                bv.Network
-            FROM BlockchainVerifications bv
-            JOIN Candidates c ON bv.CandidateID = c.CandidateID
-            ORDER BY bv.LastChecked DESC
+            SELECT 
+                bv.verificationid as verificationid,
+                bv.candidateid as candidateid,
+                c.fullname as fullname,
+                bv.credentialtype as credentialtype,
+                bv.verificationstatus as verificationstatus,
+                bv.blockchaintransactionid as blockchaintransactionid,
+                bv.network as network
+            FROM blockchainverifications bv
+            JOIN candidates c ON bv.candidateid = c.candidateid
+            ORDER BY bv.lastchecked DESC
+            LIMIT 10
         `);
 
         res.json({
@@ -1815,19 +1782,18 @@ router.get('/blockchain-dashboard', protect, authorize([1, 2]), async (req, res)
         });
     } catch (err) {
         console.error("Blockchain Dashboard Error:", err.message);
-        // Return empty data on error instead of 500
         res.json({
             summary: {
-                TotalVerifications: 0,
-                Pending: 0,
-                Verified: 0,
-                Failed: 0,
-                Degrees: 0,
-                Certificates: 0,
-                Employment: 0,
-                Identity: 0,
-                TotalCost: 0,
-                AvgCost: 0
+                totalverifications: 0,
+                pending: 0,
+                verified: 0,
+                failed: 0,
+                degrees: 0,
+                certificates: 0,
+                employment: 0,
+                identity: 0,
+                totalcost: 0,
+                avgcost: 0
             },
             byType: [],
             recent: []
@@ -1849,25 +1815,25 @@ router.get('/ranking-history/:candidateId', protect, authorize([1, 2]), async (r
     try {
         let queryStr = `
             SELECT 
-                crh.HistoryID,
-                crh.CandidateID,
-                crh.JobID,
-                jp.JobTitle,
-                crh.MatchScore,
-                crh.CalculatedAt
-            FROM CandidateRankingHistory crh
-            LEFT JOIN JobPostings jp ON crh.JobID = jp.JobID
-            WHERE crh.CandidateID = ?
+                crh.historyid as historyid,
+                crh.candidateid as candidateid,
+                crh.jobid as jobid,
+                jp.jobtitle as jobtitle,
+                crh.matchscore as matchscore,
+                crh.calculatedat as calculatedat
+            FROM candidaterankinghistory crh
+            LEFT JOIN jobpostings jp ON crh.jobid = jp.jobid
+            WHERE crh.candidateid = ?
         `;
         const params = [parseInt(candidateId)];
 
         // Optionally filter by specific job
         if (jobId) {
-            queryStr += ` AND crh.JobID = ?`;
+            queryStr += ` AND crh.jobid = ?`;
             params.push(parseInt(jobId));
         }
 
-        queryStr += ` ORDER BY crh.CalculatedAt DESC`;
+        queryStr += ` ORDER BY crh.calculatedat DESC`;
 
         const history = await query(queryStr, params);
 
@@ -1881,7 +1847,7 @@ router.get('/ranking-history/:candidateId', protect, authorize([1, 2]), async (r
         };
 
         if (history.length > 0) {
-            const scores = history.map(h => h.MatchScore || 0);
+            const scores = history.map(h => h.matchscore || 0);
             stats.avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2);
             stats.highestScore = Math.max(...scores);
             stats.lowestScore = Math.min(...scores);
@@ -1890,8 +1856,8 @@ router.get('/ranking-history/:candidateId', protect, authorize([1, 2]), async (r
             if (history.length >= 6) {
                 const recent = history.slice(0, 3);
                 const previous = history.slice(3, 6);
-                const recentAvg = recent.reduce((a, b) => a + (b.MatchScore || 0), 0) / 3;
-                const previousAvg = previous.reduce((a, b) => a + (b.MatchScore || 0), 0) / 3;
+                const recentAvg = recent.reduce((a, b) => a + (b.matchscore || 0), 0) / 3;
+                const previousAvg = previous.reduce((a, b) => a + (b.matchscore || 0), 0) / 3;
 
                 if (recentAvg > previousAvg + 5) {
                     stats.scoreTrend = 'improving';
@@ -1927,7 +1893,7 @@ router.post('/ranking-history', protect, authorize([1, 2]), async (req, res) => 
 
     try {
         await query(
-            `EXEC sp_SaveCandidateRanking ?, ?, ?`,
+            `CALL sp_savecandidateranking(?, ?, ?)`,
             [parseInt(candidateId), parseInt(jobId), parseFloat(matchScore)]
         );
 
@@ -1955,18 +1921,18 @@ router.get('/ranking-history/job/:jobId', protect, authorize([1, 2]), async (req
     try {
         const history = await query(`
             SELECT 
-                crh.HistoryID,
-                crh.CandidateID,
-                c.FullName,
-                crh.JobID,
-                jp.JobTitle,
-                crh.MatchScore,
-                crh.CalculatedAt
-            FROM CandidateRankingHistory crh
-            LEFT JOIN Candidates c ON crh.CandidateID = c.CandidateID
-            LEFT JOIN JobPostings jp ON crh.JobID = jp.JobID
-            WHERE crh.JobID = ?
-            ORDER BY crh.MatchScore DESC, crh.CalculatedAt DESC
+                crh.historyid as historyid,
+                crh.candidateid as candidateid,
+                c.fullname as fullname,
+                crh.jobid as jobid,
+                jp.jobtitle as jobtitle,
+                crh.matchscore as matchscore,
+                crh.calculatedat as calculatedat
+            FROM candidaterankinghistory crh
+            LEFT JOIN candidates c ON crh.candidateid = c.candidateid
+            LEFT JOIN jobpostings jp ON crh.jobid = jp.jobid
+            WHERE crh.jobid = ?
+            ORDER BY crh.matchscore DESC, crh.calculatedat DESC
         `, [parseInt(jobId)]);
 
         res.json(history);

@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { ThemeAnimationType, useModeAnimation } from 'react-theme-switch-animation';
 import {
     LayoutDashboard, Database, LogOut, User,
     ChevronRight, Sparkles, Bell, Sun, Moon, Menu, X
@@ -14,6 +15,19 @@ const DashboardShell = ({ children, title, subtitle, navigation = [], onNotifica
     const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
+    // Initialize theme switch animation
+    const { ref: themeButtonRef, toggleSwitchTheme, isDarkMode } = useModeAnimation({
+        animationType: ThemeAnimationType.CIRCLE, //QR_SCAN BLUR_CIRCLE CIRCLE
+        duration: 750,
+        isDarkMode: theme === 'dark',
+        onDarkModeChange: (isDark) => {
+            // Sync with ThemeContext
+            if ((isDark && theme !== 'dark') || (!isDark && theme !== 'light')) {
+                toggleTheme();
+            }
+        }
+    });
 
     const handleLogout = () => {
         logout();
@@ -88,23 +102,29 @@ const DashboardShell = ({ children, title, subtitle, navigation = [], onNotifica
                     ))}
                 </nav>
 
-                <div className="mt-auto space-y-6 overflow-hidden">
-                    <button
+                {/* Sidebar Footer with User Profile and Logout */}
+                <div className="mt-auto overflow-hidden">
+                    <div
                         onClick={onProfileClick}
-                        className="w-full p-6 rounded-3xl border border-[var(--border-primary)] bg-[var(--bg-accent)] hover:border-indigo-500/30 hover:bg-[var(--bg-primary)] transition-all cursor-pointer text-left"
+                        className="w-full p-4 rounded-2xl border border-[var(--border-primary)] bg-[var(--bg-accent)] hover:border-indigo-500/30 hover:bg-[var(--bg-primary)] dark:hover:bg-[var(--bg-primary)] transition-all cursor-pointer text-left flex items-center gap-3"
                     >
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-primary)] flex items-center justify-center">
-                                <User size={20} className="text-indigo-500" />
-                            </div>
-                            <div className="flex-1">
-                                <div className="text-xs font-black truncate max-w-[120px]">{user?.Username}</div>
-                                <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-tighter">
-                                    {user?.RoleID === 1 ? 'Administrator' : user?.RoleID === 2 ? 'Recruiter' : 'Candidate'}
-                                </div>
+                        <div className="w-10 h-10 rounded-xl bg-[var(--bg-primary)] dark:bg-[var(--bg-secondary)] border border-[var(--border-primary)] flex items-center justify-center shrink-0">
+                            <User size={20} className="text-indigo-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-xs font-black truncate max-w-[120px]">{user?.Username}</div>
+                            <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-tighter">
+                                {user?.RoleID === 1 ? 'Administrator' : user?.RoleID === 2 ? 'Recruiter' : 'Candidate'}
                             </div>
                         </div>
-                    </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleLogout(); }}
+                            className="p-2 rounded-xl hover:bg-red-500/10 dark:hover:bg-red-500/20 text-red-500 dark:text-red-400 transition-all"
+                            title="Logout"
+                        >
+                            <LogOut size={18} />
+                        </button>
+                    </div>
                 </div>
             </aside>
 
@@ -129,7 +149,8 @@ const DashboardShell = ({ children, title, subtitle, navigation = [], onNotifica
                     <div className="flex items-center gap-4 lg:gap-6">
                         {/* Theme Switcher */}
                         <button
-                            onClick={toggleTheme}
+                            ref={themeButtonRef}
+                            onClick={toggleSwitchTheme}
                             className="w-10 h-10 rounded-xl bg-[var(--bg-accent)] border border-[var(--border-primary)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all"
                         >
                             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
@@ -141,35 +162,6 @@ const DashboardShell = ({ children, title, subtitle, navigation = [], onNotifica
                         >
                             <Bell size={18} />
                             <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-indigo-500 rounded-full border-2 border-[var(--header-bg)]"></span>
-                        </button>
-
-                        {/* Hide on mobile */}
-                        <div className="hidden lg:flex items-center gap-6">
-                            <div className="h-8 w-[1px] bg-[var(--border-primary)]"></div>
-                            <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                    <div className="text-xs font-black uppercase tracking-tighter truncate max-w-[120px]">{user?.Username}</div>
-                                    <div className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest">
-                                        {user?.RoleID === 1 ? 'Administrator' : user?.RoleID === 2 ? 'Recruiter' : 'Candidate'}
-                                    </div>
-                                </div>
-                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shadow-lg shadow-indigo-600/20">
-                                    <User size={20} />
-                                </div>
-                            </div>
-
-                            <div className="h-8 w-[1px] bg-[var(--border-primary)]"></div>
-                        </div>
-
-                        <button
-                            onClick={handleLogout}
-                            className="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 flex items-center justify-center transition-all group/logout relative"
-                            title="Terminate Session"
-                        >
-                            <LogOut size={18} />
-                            <span className="absolute -top-10 scale-0 group-hover:logout:scale-100 transition-all bg-red-500 text-white text-[8px] font-black uppercase px-2 py-1 rounded-lg pointer-events-none whitespace-nowrap">
-                                Logout
-                            </span>
                         </button>
                     </div>
                 </header>

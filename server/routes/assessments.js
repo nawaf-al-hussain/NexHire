@@ -9,31 +9,31 @@ const { protect, authorize } = require('../middleware/rbac');
 // ----------------------------------------------------
 router.get('/available', protect, authorize([3]), async (req, res) => {
     try {
-        const userID = req.user.UserID;
+        const userID = req.user.userid;
 
         // 1. Get CandidateID
-        const candCheck = await query("SELECT CandidateID FROM Candidates WHERE UserID = ?", [userID]);
+        const candCheck = await query("SELECT candidateid as candidateid FROM candidates WHERE userid = ?", [userID]);
         if (candCheck.length === 0) return res.status(404).json({ error: "Candidate profile not found." });
-        const candidateId = candCheck[0].CandidateID;
+        const candidateId = candCheck[0].candidateid;
 
         // 2. Query available assessments for claimed (but unverified) skills
         // We look for CandidateSkills that don't have a passing SkillVerifications record
         const assessments = await query(`
             SELECT 
-                ma.AssessmentID, 
-                ma.SkillID, 
-                s.SkillName,
-                ma.AssessmentType, 
-                ma.Title, 
-                ma.Description, 
-                ma.TimeLimit, 
-                ma.PassingScore, 
-                ma.QuestionsCount 
-            FROM MicroAssessments ma
-            JOIN Skills s ON ma.SkillID = s.SkillID
-            JOIN CandidateSkills cs ON cs.SkillID = ma.SkillID AND cs.CandidateID = ?
-            LEFT JOIN SkillVerifications sv ON sv.CandidateID = cs.CandidateID AND sv.SkillID = cs.SkillID AND sv.VerificationScore >= ma.PassingScore
-            WHERE ma.IsActive = 1 AND sv.VerificationID IS NULL
+                ma.assessmentid as assessmentid, 
+                ma.skillid as skillid, 
+                s.skillname as skillname,
+                ma.assessmenttype as assessmenttype, 
+                ma.title as title, 
+                ma.description as description, 
+                ma.timelimit as timelimit, 
+                ma.passingscore as passingscore, 
+                ma.questionscount as questionscount 
+            FROM microassessments ma
+            JOIN skills s ON ma.skillid = s.skillid
+            JOIN candidateskills cs ON cs.skillid = ma.skillid AND cs.candidateid = ?
+            LEFT JOIN skillverifications sv ON sv.candidateid = cs.candidateid AND sv.skillid = cs.skillid AND sv.verificationscore >= ma.passingscore
+            WHERE ma.isactive = TRUE AND sv.verificationid IS NULL
         `, [candidateId]);
 
         res.json(assessments);
@@ -50,25 +50,25 @@ router.get('/available', protect, authorize([3]), async (req, res) => {
 router.post('/start', protect, authorize([3]), async (req, res) => {
     const { assessmentId } = req.body;
     try {
-        const userID = req.user.UserID;
+        const userID = req.user.userid;
 
-        const candCheck = await query("SELECT CandidateID FROM Candidates WHERE UserID = ?", [userID]);
+        const candCheck = await query("SELECT candidateid as candidateid FROM candidates WHERE userid = ?", [userID]);
         if (candCheck.length === 0) return res.status(404).json({ error: "Candidate profile not found." });
-        const candidateId = candCheck[0].CandidateID;
+        const candidateId = candCheck[0].candidateid;
 
         // Verify assessment exists
-        const assessmentCheck = await query("SELECT * FROM MicroAssessments WHERE AssessmentID = ? AND IsActive = 1", [assessmentId]);
+        const assessmentCheck = await query("SELECT * FROM microassessments WHERE assessmentid = ? AND isactive = TRUE", [assessmentId]);
         if (assessmentCheck.length === 0) return res.status(404).json({ error: "Assessment not found or inactive." });
 
         // Insert new attempt record
         // Using OUTPUT inserted.AttemptID to return the ID directly
         const startResult = await query(`
-            INSERT INTO AssessmentAttempts (CandidateID, AssessmentID, StartedAt, IsPassed)
-            OUTPUT inserted.AttemptID
-            VALUES (?, ?, GETDATE(), 0)
+            INSERT INTO assessmentattempts (candidateid, assessmentid, startedat, ispassed)
+            VALUES (?, ?, NOW(), FALSE)
+            RETURNING attemptid as attemptid
         `, [candidateId, assessmentId]);
 
-        const attemptId = startResult[0].AttemptID;
+        const attemptId = startResult[0].attemptid;
 
         res.status(201).json({ success: true, attemptId, assessment: assessmentCheck[0] });
     } catch (err) {
@@ -84,18 +84,18 @@ router.post('/start', protect, authorize([3]), async (req, res) => {
 router.post('/submit', protect, authorize([3]), async (req, res) => {
     const { attemptId, score, timeSpentSeconds, details } = req.body;
     try {
-        const userID = req.user.UserID;
+        const userID = req.user.userid;
 
-        const candCheck = await query("SELECT CandidateID FROM Candidates WHERE UserID = ?", [userID]);
+        const candCheck = await query("SELECT candidateid as candidateid FROM candidates WHERE userid = ?", [userID]);
         if (candCheck.length === 0) return res.status(404).json({ error: "Candidate profile not found." });
-        const candidateId = candCheck[0].CandidateID;
+        const candidateId = candCheck[0].candidateid;
 
         // Ensure attempt exists and belongs to candidate
         const attemptCheck = await query(`
-            SELECT a.*, m.PassingScore, m.SkillID
-            FROM AssessmentAttempts a
-            JOIN MicroAssessments m ON a.AssessmentID = m.AssessmentID
-            WHERE a.AttemptID = ? AND a.CandidateID = ?
+            SELECT a.*, m.passingscore as passingscore, m.skillid as skillid
+            FROM assessmentattempts a
+            JOIN microassessments m ON a.assessmentid = m.assessmentid
+            WHERE a.attemptid = ? AND a.candidateid = ?
         `, [attemptId, candidateId]);
 
         if (attemptCheck.length === 0) {
@@ -103,17 +103,17 @@ router.post('/submit', protect, authorize([3]), async (req, res) => {
         }
 
         const attemptInfo = attemptCheck[0];
-        if (attemptInfo.CompletedAt != null) {
+        if (attemptInfo.completedat != null) {
             return res.status(400).json({ error: "Assessment already completed." });
         }
 
-        const isPassed = score >= attemptInfo.PassingScore ? 1 : 0;
+        const isPassed = score >= attemptInfo.passingscore;
 
         // 1. Update the attempts record
         await query(`
-            UPDATE AssessmentAttempts 
-            SET CompletedAt = GETDATE(), Score = ?, TimeSpentSeconds = ?, IsPassed = ?, Details = ?
-            WHERE AttemptID = ?
+            UPDATE assessmentattempts 
+            SET completedat = NOW(), score = ?, timespentseconds = ?, ispassed = ?, details = ?
+            WHERE attemptid = ?
         `, [score, timeSpentSeconds, isPassed, details, attemptId]);
 
         // 2. If passed, store it in SkillVerifications
@@ -121,12 +121,12 @@ router.post('/submit', protect, authorize([3]), async (req, res) => {
         if (isPassed) {
             // Upsert / Insert logic for verification
             const verifyInsert = await query(`
-                INSERT INTO SkillVerifications (CandidateID, SkillID, AssessmentID, VerificationMethod, VerificationScore, VerifiedAt, IsVerified)
-                OUTPUT inserted.VerificationID
-                VALUES (?, ?, ?, 'CodeTest', ?, GETDATE(), 1)
-            `, [candidateId, attemptInfo.SkillID, attemptInfo.AssessmentID, score]);
+                INSERT INTO skillverifications (candidateid, skillid, assessmentid, verificationmethod, verificationscore, verifiedat, isverified)
+                VALUES (?, ?, ?, 'CodeTest', ?, NOW(), TRUE)
+                RETURNING verificationid as verificationid
+            `, [candidateId, attemptInfo.skillid, attemptInfo.assessmentid, score]);
 
-            verificationId = verifyInsert[0].VerificationID;
+            verificationId = verifyInsert[0].verificationid;
         }
 
         res.status(200).json({ success: true, isPassed, verificationId });

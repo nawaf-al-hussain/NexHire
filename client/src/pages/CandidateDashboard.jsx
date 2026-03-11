@@ -286,7 +286,6 @@ const CandidateDashboard = () => {
             default:
                 // Use filteredJobs if search is active, otherwise use discoverJobs
                 const jobsToDisplay = (searchQuery || locationFilter) ? filteredJobs : discoverJobs;
-                const jobsNotApplied = jobsToDisplay.filter(job => !applications.some(app => app.JobID === job.JobID) && !appliedJobIds.has(job.JobID));
 
                 return (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -295,7 +294,7 @@ const CandidateDashboard = () => {
                                 <div className="flex items-center gap-3">
                                     <Target className="w-5 h-5 text-indigo-500" />
                                     <h2 className="text-lg font-black uppercase tracking-tighter">
-                                        {(searchQuery || locationFilter) ? 'Search Results' : 'Matches Found for You'}
+                                        {(searchQuery || locationFilter) ? 'Search Results' : `Matches Found for You (${jobsToDisplay.length})`}
                                     </h2>
                                 </div>
                             </div>
@@ -306,7 +305,7 @@ const CandidateDashboard = () => {
                                         <Zap className="w-12 h-12 text-indigo-500 animate-pulse mb-4" />
                                         <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Querying Match Engine...</p>
                                     </div>
-                                ) : jobsNotApplied.length === 0 ? (
+                                ) : jobsToDisplay.length === 0 ? (
                                     <div className="p-12 border-2 border-dashed border-[var(--border-primary)] rounded-[3rem] text-center bg-[var(--bg-accent)]/5">
                                         <p className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest italic opacity-40">
                                             {(searchQuery || locationFilter)
@@ -315,22 +314,22 @@ const CandidateDashboard = () => {
                                         </p>
                                     </div>
                                 ) : (
-                                    jobsNotApplied.map((job) => {
+                                    jobsToDisplay.map((job) => {
                                         const isExpanded = expandedJobId === job.JobID;
                                         const isApplied = applications.some(app => app.JobID === job.JobID) || appliedJobIds.has(job.JobID);
                                         return (
                                             <div key={job.JobID}
-                                                className={`rounded-[2.5rem] border transition-all cursor-pointer relative overflow-hidden ${isExpanded ? 'border-indigo-500/30 bg-indigo-500/[0.02]' : 'border-[var(--border-primary)] bg-[var(--bg-accent)] hover:bg-indigo-500/[0.02]'}`}
+                                                className={`rounded-[2.5rem] border transition-all cursor-pointer relative overflow-hidden ${isApplied ? 'opacity-60 border-gray-500/20 bg-gray-500/5' : isExpanded ? 'border-indigo-500/30 bg-indigo-500/[0.02]' : 'border-[var(--border-primary)] bg-[var(--bg-accent)] hover:bg-indigo-500/[0.02]'}`}
                                                 onClick={() => setExpandedJobId(isExpanded ? null : job.JobID)}
                                             >
-                                                <div className="absolute top-0 right-0 w-1 h-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                <div className={`absolute top-0 right-0 w-1 h-full ${isApplied ? 'bg-gray-400' : 'bg-indigo-500'} opacity-0 group-hover:opacity-100 transition-opacity`}></div>
                                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-8">
                                                     <div className="flex gap-6">
                                                         <div className="w-16 h-16 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-primary)] flex items-center justify-center font-black text-lg text-[var(--text-muted)] group-hover:text-indigo-500 shrink-0">
                                                             {job.JobTitle.substring(0, 2).toUpperCase()}
                                                         </div>
                                                         <div>
-                                                            <h4 className="text-xl font-black group-hover:text-indigo-500 transition-colors leading-tight">{job.JobTitle}</h4>
+                                                            <h4 className={`text-xl font-black group-hover:text-indigo-500 transition-colors leading-tight ${isApplied ? 'text-gray-400' : ''}`}>{job.JobTitle}</h4>
                                                             <div className="flex items-center gap-3 mt-1 flex-wrap">
                                                                 <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{job.Location}</p>
                                                                 <span className="text-[8px] text-[var(--text-muted)] font-black uppercase tracking-widest opacity-60">• {job.MinExperience}+ Yrs Exp</span>
@@ -344,7 +343,7 @@ const CandidateDashboard = () => {
                                                                     {job.MatchedSkillsCount} Skill Matches
                                                                 </span>
                                                             )}
-                                                            <span className="px-3 py-1 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Active</span>
+                                                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${isApplied ? 'bg-gray-500/10 border border-gray-500/20 text-gray-400' : 'bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-muted)]'}`}>{isApplied ? 'Applied' : 'Active'}</span>
                                                         </div>
                                                         <div className="text-right flex flex-col items-end gap-3">
                                                             <div className="flex flex-col items-end">
@@ -537,61 +536,70 @@ const CandidateDashboard = () => {
             onProfileClick={() => setActiveTab('Profile')}
         >
             {activeTab === 'Discover Jobs' && (
-                <div className="relative isolate mb-12 p-8 rounded-[3rem] bg-[var(--bg-secondary)] border border-[var(--border-primary)] overflow-hidden shadow-3xl">
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 blur-[100px] rounded-full -z-10 animate-pulse"></div>
-
-                    <div className="flex flex-col lg:flex-row gap-4 p-3 bg-[var(--bg-primary)]/50 backdrop-blur-xl border border-[var(--border-primary)] rounded-[2rem]">
-                        <div className="flex-1 relative group">
-                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="Project Architect, SQL dev, or skills..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={handleSearchKeyDown}
-                                className="w-full bg-[var(--bg-accent)] border-transparent text-[var(--text-primary)] rounded-2xl py-4 pl-14 pr-4 focus:bg-white/10 dark:focus:bg-white/5 outline-none transition-all placeholder:text-[var(--text-muted)] font-bold text-sm"
-                            />
-                        </div>
-                        <div className="lg:w-64 relative group">
-                            <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="US / Remote"
-                                value={locationFilter}
-                                onChange={(e) => setLocationFilter(e.target.value)}
-                                onKeyDown={handleSearchKeyDown}
-                                className="w-full bg-[var(--bg-accent)] border-transparent text-[var(--text-primary)] rounded-2xl py-4 pl-14 pr-4 focus:bg-white/10 dark:focus:bg-white/5 outline-none transition-all placeholder:text-[var(--text-muted)] font-bold text-sm"
-                            />
-                        </div>
-                        <button
-                            onClick={handleSearch}
-                            className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 transition-all flex items-center justify-center gap-2"
-                        >
-                            <Search size={16} />
-                            Query Jobs
-                        </button>
-                        {(searchQuery || locationFilter) && (
-                            <button
-                                onClick={() => {
-                                    setSearchQuery('');
-                                    setLocationFilter('');
-                                    setFilteredJobs(discoverJobs);
-                                }}
-                                className="px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-accent)] transition-all"
-                            >
-                                Clear
-                            </button>
-                        )}
+                <div className="space-y-8">
+                    {/* Header */}
+                    <div className="flex items-center gap-3">
+                        <Briefcase className="w-5 h-5 text-indigo-500" />
+                        <h2 className="text-lg font-black uppercase tracking-tighter">Discover Jobs</h2>
                     </div>
 
-                    {/* Search Results Count */}
-                    {(searchQuery || locationFilter) && (
-                        <div className="mt-4 text-sm text-[var(--text-muted)]">
-                            Showing {filteredJobs.length} of {discoverJobs.length} jobs
-                            {searchQuery && <span className="ml-2">for "<span className="text-indigo-500 font-bold">{searchQuery}</span>"</span>}
-                            {locationFilter && <span className="ml-2">in "<span className="text-indigo-500 font-bold">{locationFilter}</span>"</span>}
+                    {/* Search Bar */}
+                    <div className="relative isolate p-8 rounded-[3rem] bg-[var(--bg-secondary)] border border-[var(--border-primary)] overflow-hidden shadow-3xl">
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 blur-[100px] rounded-full -z-10 animate-pulse"></div>
+
+                        <div className="flex flex-col lg:flex-row gap-4 p-3 bg-[var(--bg-primary)]/50 backdrop-blur-xl border border-[var(--border-primary)] rounded-[2rem]">
+                            <div className="flex-1 relative group">
+                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-5 h-5" />
+                                <input
+                                    type="text"
+                                    placeholder="Project Architect, SQL dev, or skills..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyDown={handleSearchKeyDown}
+                                    className="w-full bg-[var(--bg-accent)] border-transparent text-[var(--text-primary)] rounded-2xl py-4 pl-14 pr-4 focus:bg-white/10 dark:focus:bg-white/5 outline-none transition-all placeholder:text-[var(--text-muted)] font-bold text-sm"
+                                />
+                            </div>
+                            <div className="lg:w-64 relative group">
+                                <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-5 h-5" />
+                                <input
+                                    type="text"
+                                    placeholder="US / Remote"
+                                    value={locationFilter}
+                                    onChange={(e) => setLocationFilter(e.target.value)}
+                                    onKeyDown={handleSearchKeyDown}
+                                    className="w-full bg-[var(--bg-accent)] border-transparent text-[var(--text-primary)] rounded-2xl py-4 pl-14 pr-4 focus:bg-white/10 dark:focus:bg-white/5 outline-none transition-all placeholder:text-[var(--text-muted)] font-bold text-sm"
+                                />
+                            </div>
+                            <button
+                                onClick={handleSearch}
+                                className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Search size={16} />
+                                Query Jobs
+                            </button>
+                            {(searchQuery || locationFilter) && (
+                                <button
+                                    onClick={() => {
+                                        setSearchQuery('');
+                                        setLocationFilter('');
+                                        setFilteredJobs(discoverJobs);
+                                    }}
+                                    className="px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-accent)] transition-all"
+                                >
+                                    Clear
+                                </button>
+                            )}
                         </div>
-                    )}
+
+                        {/* Search Results Count */}
+                        {(searchQuery || locationFilter) && (
+                            <div className="mt-4 text-sm text-[var(--text-muted)]">
+                                Showing {filteredJobs.length} of {discoverJobs.length} jobs
+                                {searchQuery && <span className="ml-2">for "<span className="text-indigo-500 font-bold">{searchQuery}</span>"</span>}
+                                {locationFilter && <span className="ml-2">in "<span className="text-indigo-500 font-bold">{locationFilter}</span>"</span>}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 

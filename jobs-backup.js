@@ -5,27 +5,15 @@ const { protect, authorize } = require('../middleware/rbac');
 
 /**
  * @route   GET /api/jobs
- * @desc    Get all job postings (active and inactive) for recruiters
+ * @desc    Get all active job postings for recruiters
  * @access  Private (Recruiter)
  */
 router.get('/', protect, authorize(2), async (req, res) => {
     try {
-        // Get ALL jobs including inactive ones for archive functionality
-        // Using vw_VacancyUtilization to include ApplicationCount and FilledPositions
-        const { isActive } = req.query;
-
-        let queryStr = "SELECT * FROM vw_vacancyutilization WHERE 1=1";
-        const params = [];
-
-        // Filter by isActive if provided (for archive toggle)
-        if (isActive !== undefined) {
-            queryStr += " AND isactive = ?";
-            params.push(isActive === 'true' ? true : false);
-        }
-
-        queryStr += " ORDER BY jobid DESC";
-
-        const jobs = await query(queryStr, params);
+        // Using the view for vacancy utilization
+        const jobs = await query(
+            "SELECT * FROM vw_VacancyUtilization ORDER BY JobID DESC"
+        );
         res.json(jobs);
     } catch (err) {
         console.error("Fetch Jobs Error:", err.message);
@@ -40,18 +28,18 @@ router.get('/', protect, authorize(2), async (req, res) => {
  */
 router.post('/', protect, authorize(2), async (req, res) => {
     const { title, description, location, minExperience, vacancies, skills, minSalary, maxSalary, salaryTransparent } = req.body;
-    const recruiterUserID = req.user.userid;
+    const recruiterUserID = req.user.UserID;
 
     if (!title || !vacancies) {
         return res.status(400).json({ error: "Title and vacancies are required." });
     }
 
     try {
-        // Use RETURNING JobID for PostgreSQL
+        // Use OUTPUT INSERTED.JobID for more reliable identity retrieval across all drivers
         const result = await query(
-            "INSERT INTO jobpostings (jobtitle, description, location, minexperience, vacancies, createdby) " +
-            "VALUES (?, ?, ?, ?, ?, ?) " +
-            "RETURNING jobid as id",
+            "INSERT INTO JobPostings (JobTitle, Description, Location, MinExperience, Vacancies, CreatedBy) " +
+            "OUTPUT INSERTED.JobID as id " +
+            "VALUES (?, ?, ?, ?, ?, ?)",
             [title, description, location, minExperience || 0, vacancies, recruiterUserID]
         );
 
@@ -66,8 +54,8 @@ router.post('/', protect, authorize(2), async (req, res) => {
             for (const skill of skills) {
                 // skill: { id: 1, isMandatory: 1, minProficiency: 5 }
                 await query(
-                    "INSERT INTO jobskills (jobid, skillid, ismandatory, minproficiency) VALUES (?, ?, ?, ?)",
-                    [jobID, skill.id, !!skill.isMandatory, skill.minProficiency || 1]
+                    "INSERT INTO JobSkills (JobID, SkillID, IsMandatory, MinProficiency) VALUES (?, ?, ?, ?)",
+                    [jobID, skill.id, skill.isMandatory ? 1 : 0, skill.minProficiency || 1]
                 );
             }
         }
@@ -75,8 +63,8 @@ router.post('/', protect, authorize(2), async (req, res) => {
         // Insert Salary Range if provided
         if (minSalary || maxSalary) {
             await query(
-                "INSERT INTO jobsalaryranges (jobid, minsalary, maxsalary, istransparent) VALUES (?, ?, ?, ?)",
-                [jobID, minSalary || null, maxSalary || null, !!salaryTransparent]
+                "INSERT INTO JobSalaryRanges (JobID, MinSalary, MaxSalary, IsTransparent) VALUES (?, ?, ?, ?)",
+                [jobID, minSalary || null, maxSalary || null, salaryTransparent ? 1 : 0]
             );
         }
 
@@ -95,29 +83,29 @@ router.post('/', protect, authorize(2), async (req, res) => {
  */
 router.get('/:id', protect, async (req, res) => {
     try {
-        const job = await query("SELECT * FROM jobpostings WHERE jobid = ?", [req.params.id]);
+        const job = await query("SELECT * FROM JobPostings WHERE JobID = ?", [req.params.id]);
 
         if (job.length === 0) {
             return res.status(404).json({ error: "Job not found." });
         }
 
         const skills = await query(
-            "SELECT js.*, s.skillname FROM jobskills js JOIN skills s ON js.skillid = s.skillid WHERE js.jobid = ?",
+            "SELECT js.*, s.SkillName FROM JobSkills js JOIN Skills s ON js.SkillID = s.SkillID WHERE js.JobID = ?",
             [req.params.id]
         );
 
         // Get salary ranges
         const salaryRanges = await query(
-            "SELECT * FROM jobsalaryranges WHERE jobid = ?",
+            "SELECT * FROM JobSalaryRanges WHERE JobID = ?",
             [req.params.id]
         );
 
         const jobData = { ...job[0], skills };
 
         if (salaryRanges.length > 0) {
-            jobData.minSalary = salaryRanges[0].minsalary;
-            jobData.maxSalary = salaryRanges[0].maxsalary;
-            jobData.salaryTransparent = salaryRanges[0].istransparent;
+            jobData.minSalary = salaryRanges[0].MinSalary;
+            jobData.maxSalary = salaryRanges[0].MaxSalary;
+            jobData.salaryTransparent = salaryRanges[0].IsTransparent === 1;
         }
 
         res.json(jobData);
@@ -136,59 +124,27 @@ router.put('/:id', protect, authorize(2), async (req, res) => {
     const { title, description, location, minExperience, vacancies, isActive, skills, minSalary, maxSalary, salaryTransparent } = req.body;
     const jobId = req.params.id;
 
-    // Allow partial updates (e.g., just updating IsActive for archiving)
-    if (!title && !vacancies && isActive === undefined) {
-        return res.status(400).json({ error: "At least one field to update is required." });
+    if (!title || !vacancies) {
+        return res.status(400).json({ error: "Title and vacancies are required." });
     }
 
     try {
-        // Build dynamic query for partial updates
-        const updates = [];
-        const params = [];
-
-        if (title !== undefined) {
-            updates.push("jobtitle = ?");
-            params.push(title);
-        }
-        if (description !== undefined) {
-            updates.push("description = ?");
-            params.push(description);
-        }
-        if (location !== undefined) {
-            updates.push("location = ?");
-            params.push(location);
-        }
-        if (minExperience !== undefined) {
-            updates.push("minexperience = ?");
-            params.push(minExperience);
-        }
-        if (vacancies !== undefined) {
-            updates.push("vacancies = ?");
-            params.push(vacancies);
-        }
-        if (isActive !== undefined) {
-            updates.push("isactive = ?");
-            params.push(!!isActive);
-        }
-
-        if (updates.length > 0) {
-            params.push(jobId);
-            await query(
-                `UPDATE jobpostings SET ${updates.join(', ')} WHERE jobid = ?`,
-                params
-            );
-        }
+        // Update the job posting
+        await query(
+            "UPDATE JobPostings SET JobTitle = ?, Description = ?, Location = ?, MinExperience = ?, Vacancies = ?, IsActive = ? WHERE JobID = ?",
+            [title, description, location, minExperience || 0, vacancies, isActive ? 1 : 0, jobId]
+        );
 
         // Update skills - delete existing and insert new ones
         if (skills && Array.isArray(skills)) {
             // Delete existing skills
-            await query("DELETE FROM jobskills WHERE jobid = ?", [jobId]);
+            await query("DELETE FROM JobSkills WHERE JobID = ?", [jobId]);
 
             // Insert new skills
             for (const skill of skills) {
                 await query(
-                    "INSERT INTO jobskills (jobid, skillid, ismandatory, minproficiency) VALUES (?, ?, ?, ?)",
-                    [jobId, skill.id, !!skill.isMandatory, skill.minProficiency || 1]
+                    "INSERT INTO JobSkills (JobID, SkillID, IsMandatory, MinProficiency) VALUES (?, ?, ?, ?)",
+                    [jobId, skill.id, skill.isMandatory ? 1 : 0, skill.minProficiency || 1]
                 );
             }
         }
@@ -196,19 +152,19 @@ router.put('/:id', protect, authorize(2), async (req, res) => {
         // Update salary ranges
         if (minSalary !== undefined || maxSalary !== undefined || salaryTransparent !== undefined) {
             // Check if salary range exists
-            const existingRange = await query("SELECT rangeid FROM jobsalaryranges WHERE jobid = ?", [jobId]);
+            const existingRange = await query("SELECT RangeID FROM JobSalaryRanges WHERE JobID = ?", [jobId]);
 
             if (existingRange.length > 0) {
                 // Update existing
                 await query(
-                    "UPDATE jobsalaryranges SET minsalary = ?, maxsalary = ?, istransparent = ? WHERE jobid = ?",
-                    [minSalary || null, maxSalary || null, !!salaryTransparent, jobId]
+                    "UPDATE JobSalaryRanges SET MinSalary = ?, MaxSalary = ?, IsTransparent = ? WHERE JobID = ?",
+                    [minSalary || null, maxSalary || null, salaryTransparent ? 1 : 0, jobId]
                 );
             } else if (minSalary || maxSalary) {
                 // Insert new
                 await query(
-                    "INSERT INTO jobsalaryranges (jobid, minsalary, maxsalary, istransparent) VALUES (?, ?, ?, ?)",
-                    [jobId, minSalary || null, maxSalary || null, !!salaryTransparent]
+                    "INSERT INTO JobSalaryRanges (JobID, MinSalary, MaxSalary, IsTransparent) VALUES (?, ?, ?, ?)",
+                    [jobId, minSalary || null, maxSalary || null, salaryTransparent ? 1 : 0]
                 );
             }
         }
@@ -227,7 +183,7 @@ router.put('/:id', protect, authorize(2), async (req, res) => {
  */
 router.delete('/:id', protect, authorize(2), async (req, res) => {
     try {
-        await query("UPDATE jobpostings SET isdeleted = true, isactive = false WHERE jobid = ?", [req.params.id]);
+        await query("UPDATE JobPostings SET IsDeleted = 1, IsActive = 0 WHERE JobID = ?", [req.params.id]);
         res.json({ message: "Job posting deleted (archived)." });
     } catch (err) {
         console.error("Delete Job Error:", err.message);
@@ -245,10 +201,8 @@ router.get('/:id/matches', protect, authorize(2), async (req, res) => {
         const topN = req.query.topN || 10;
 
         // Execute the advanced matching stored procedure
-        // In PostgreSQL, many procs converted to functions return a table
-        // sp_AdvancedCandidateMatchingEnhanced was likely converted similarly in the migration script
         const matches = await query(
-            "SELECT * FROM sp_AdvancedCandidateMatchingEnhanced(?, ?)",
+            "EXEC sp_AdvancedCandidateMatchingEnhanced @JobID = ?, @TopN = ?",
             [req.params.id, topN]
         );
 
@@ -267,31 +221,31 @@ router.get('/:id/matches', protect, authorize(2), async (req, res) => {
 router.get('/:id/applications', protect, authorize(2), async (req, res) => {
     try {
         const applications = await query(
-            `SELECT a.*, c.fullname, c.location as candidatelocation, 
-            s.statusname, 
+            `SELECT a.*, c.FullName, c.Location as CandidateLocation, 
+            s.StatusName, 
             CAST(
                 ROUND(
-                    (COALESCE(
-                        (SELECT SUM(cs2.proficiencylevel) 
-                         FROM candidateskills cs2 
-                         JOIN jobskills js2 ON cs2.skillid = js2.skillid 
-                         WHERE cs2.candidateid = c.candidateid AND js2.jobid = a.jobid
+                    (ISNULL(
+                        (SELECT SUM(cs2.ProficiencyLevel) 
+                         FROM CandidateSkills cs2 
+                         JOIN JobSkills js2 ON cs2.SkillID = js2.SkillID 
+                         WHERE cs2.CandidateID = c.CandidateID AND js2.JobID = a.JobID
                         ), 0
-                    ) + (c.yearsofexperience * 2) + 
-                    CASE WHEN c.location = j.location THEN 10 ELSE 0 END
+                    ) + (c.YearsOfExperience * 2) + 
+                    CASE WHEN c.Location = j.Location THEN 10 ELSE 0 END
                 ) * 100.0 / NULLIF(
-                    (SELECT SUM(minproficiency) FROM jobskills WHERE jobid = a.jobid) + 20, 
+                    (SELECT SUM(MinProficiency) FROM JobSkills WHERE JobID = a.JobID) + 20, 
                     0
                 ),
                 0
                 ) AS INT
-            ) AS matchscore
-            FROM applications a
-            JOIN candidates c ON a.candidateid = c.candidateid
-            JOIN applicationstatus s ON a.statusid = s.statusid
-            JOIN jobpostings j ON a.jobid = j.jobid
-            WHERE a.jobid = ? AND a.isdeleted = false
-            ORDER BY a.applieddate DESC`,
+            ) AS MatchScore
+            FROM Applications a
+            JOIN Candidates c ON a.CandidateID = c.CandidateID
+            JOIN ApplicationStatus s ON a.StatusID = s.StatusID
+            JOIN JobPostings j ON a.JobID = j.JobID
+            WHERE a.JobID = ? AND a.IsDeleted = 0
+            ORDER BY a.AppliedDate DESC`,
             [req.params.id]
         );
         res.json(applications);

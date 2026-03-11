@@ -76,7 +76,7 @@ const EmailQueueManager = () => {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Header */}
             <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 border border-blue-500/20">
                 <div className="flex items-center justify-between">

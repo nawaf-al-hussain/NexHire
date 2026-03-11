@@ -10,16 +10,8 @@ const { protect, authorize } = require('../middleware/rbac');
  */
 router.post('/archive', protect, authorize([1]), async (req, res) => {
     try {
-        // First check if procedure exists
-        const procCheck = await query(`
-            SELECT 1 FROM sys.procedures WHERE name = 'sp_ArchiveOldData'
-        `);
-
-        if (procCheck.length === 0) {
-            return res.status(400).json({ error: "Stored procedure sp_ArchiveOldData does not exist in database." });
-        }
-
-        await query("EXEC sp_ArchiveOldData");
+        // In PostgreSQL, we can use a simpler check for procedures or just try CALL
+        await query("CALL sp_archiveolddata()");
         res.json({ message: "Archival process completed successfully." });
     } catch (err) {
         console.error("Archiving Error:", err.message);
@@ -34,7 +26,7 @@ router.post('/archive', protect, authorize([1]), async (req, res) => {
  */
 router.post('/anonymize', protect, authorize([1]), async (req, res) => {
     try {
-        await query("EXEC sp_AnonymizeArchivedCandidates");
+        await query("CALL sp_anonymizearchivedcandidates()");
         res.json({ message: "PII anonymization completed successfully." });
     } catch (err) {
         console.error("Anonymization Error:", err.message);
@@ -49,7 +41,7 @@ router.post('/anonymize', protect, authorize([1]), async (req, res) => {
  */
 router.post('/consent-check', protect, authorize([1]), async (req, res) => {
     try {
-        await query("EXEC sp_CheckConsentExpiry");
+        await query("CALL sp_checkconsentexpiry()");
         res.json({ message: "Consent expiry check completed successfully." });
     } catch (err) {
         console.error("Consent Check Error:", err.message);
@@ -66,24 +58,24 @@ router.get('/archive-stats', protect, authorize([1]), async (req, res) => {
     try {
         // Check if tables exist first
         const tablesExist = await query(`
-            SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
-            WHERE TABLE_NAME IN ('JobPostingsArchive', 'ApplicationsArchive')
+            SELECT table_name FROM information_schema.tables 
+            WHERE table_name IN ('jobpostingsarchive', 'applicationsarchive')
         `);
 
-        const tableNames = tablesExist.map(t => t.TABLE_NAME);
-        const hasJobsArchive = tableNames.includes('JobPostingsArchive');
-        const hasAppsArchive = tableNames.includes('ApplicationsArchive');
+        const tableNames = tablesExist.map(t => t.table_name);
+        const hasJobsArchive = tableNames.includes('jobpostingsarchive');
+        const hasAppsArchive = tableNames.includes('applicationsarchive');
 
         let archivedJobs = 0;
         let archivedApplications = 0;
 
         if (hasJobsArchive) {
-            const jobsResult = await query("SELECT COUNT(*) as total FROM JobPostingsArchive");
+            const jobsResult = await query("SELECT COUNT(*) as total FROM jobpostingsarchive");
             archivedJobs = jobsResult[0].total;
         }
 
         if (hasAppsArchive) {
-            const appsResult = await query("SELECT COUNT(*) as total FROM ApplicationsArchive");
+            const appsResult = await query("SELECT COUNT(*) as total FROM applicationsarchive");
             archivedApplications = appsResult[0].total;
         }
 
@@ -109,14 +101,14 @@ router.get('/archive-jobs', protect, authorize([1]), async (req, res) => {
     try {
         // Check if table exists
         const tableCheck = await query(`
-            SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'JobPostingsArchive'
+            SELECT 1 FROM information_schema.tables WHERE table_name = 'jobpostingsarchive'
         `);
 
         if (tableCheck.length === 0) {
             return res.json([]); // Return empty array if table doesn't exist
         }
 
-        const archivedJobs = await query("SELECT TOP 50 * FROM JobPostingsArchive ORDER BY ArchivedAt DESC");
+        const archivedJobs = await query("SELECT * FROM jobpostingsarchive ORDER BY archivedat DESC LIMIT 50");
         res.json(archivedJobs);
     } catch (err) {
         console.error("Archive Jobs Fetch Error:", err.message);
@@ -140,15 +132,16 @@ router.get('/archive-applications', protect, authorize([1]), async (req, res) =>
 
         try {
             archivedApps = await query(`
-                SELECT TOP 50 
-                    aa.ApplicationID,
-                    aa.CandidateID,
-                    aa.JobID,
-                    aa.StatusID,
-                    aa.AppliedDate,
-                    aa.ArchivedAt
-                FROM ApplicationsArchive aa
-                ORDER BY aa.ArchivedAt DESC
+                SELECT 
+                    aa.applicationid,
+                    aa.candidateid,
+                    aa.jobid,
+                    aa.statusid,
+                    aa.applieddate,
+                    aa.archivedat
+                FROM applicationsarchive aa
+                ORDER BY aa.archivedat DESC
+                LIMIT 50
             `);
         } catch (tableErr) {
             // Table doesn't exist or other error
@@ -162,33 +155,54 @@ router.get('/archive-applications', protect, authorize([1]), async (req, res) =>
 
         // Now try to enrich with job and status info
         try {
-            const jobIds = archivedApps.map(a => a.JobID).filter(id => id);
-            const statusIds = archivedApps.map(a => a.StatusID).filter(id => id);
+            const jobIds = archivedApps.map(a => a.jobid).filter(id => id);
+            const statusIds = archivedApps.map(a => a.statusid).filter(id => id);
+            const candidateIds = archivedApps.map(a => a.candidateid).filter(id => id);
 
             let jobMap = {};
             let statusMap = {};
+            let candidateMap = {};
 
             if (jobIds.length > 0) {
                 const jobs = await query(`
-                    SELECT JobID, JobTitle FROM JobPostings 
-                    WHERE JobID IN (${jobIds.join(',')})
+                    SELECT jobid, jobtitle FROM jobpostings 
+                    WHERE jobid IN (${jobIds.join(',')})
                 `);
-                jobs.forEach(j => { jobMap[j.JobID] = j.JobTitle; });
+                jobs.forEach(j => { jobMap[j.jobid] = j.jobtitle; });
             }
 
             if (statusIds.length > 0) {
                 const statuses = await query(`
-                    SELECT StatusID, StatusName FROM ApplicationStatus 
-                    WHERE StatusID IN (${statusIds.join(',')})
+                    SELECT statusid, statusname FROM applicationstatus 
+                    WHERE statusid IN (${statusIds.join(',')})
                 `);
-                statuses.forEach(s => { statusMap[s.StatusID] = s.StatusName; });
+                statuses.forEach(s => { statusMap[s.statusid] = s.statusname; });
             }
 
-            // Add job title and status name to results
+            if (candidateIds.length > 0) {
+                const candidates = await query(`
+                    SELECT c.candidateid, c.fullname, c.linkedinurl, u.email 
+                    FROM candidates c
+                    INNER JOIN users u ON c.userid = u.userid
+                    WHERE c.candidateid IN (${candidateIds.join(',')})
+                `);
+                candidates.forEach(c => {
+                    candidateMap[c.candidateid] = {
+                        fullname: c.fullname,
+                        email: c.email,
+                        linkedinurl: c.linkedinurl
+                    };
+                });
+            }
+
+            // Add job title, status name, and candidate info to results
             archivedApps = archivedApps.map(app => ({
                 ...app,
-                JobTitle: jobMap[app.JobID] || null,
-                StatusName: statusMap[app.StatusID] || null
+                FullName: candidateMap[app.candidateid]?.fullname || null,
+                Email: candidateMap[app.candidateid]?.email || null,
+                LinkedInURL: candidateMap[app.candidateid]?.linkedinurl || null,
+                JobTitle: jobMap[app.jobid] || null,
+                StatusName: statusMap[app.statusid] || null
             }));
         } catch (enrichErr) {
             console.log("Enrichment error:", enrichErr.message);
@@ -214,30 +228,29 @@ router.get('/email-queue', protect, authorize(1), async (req, res) => {
 
     try {
         let queryStr = `
-            SELECT e.EmailID, e.CandidateID, c.FullName as CandidateName, 
-                   e.EmailType, e.Subject, e.Body, e.IsSent, e.CreatedAt, e.SentAt
-            FROM EmailQueue e
-            LEFT JOIN Candidates c ON e.CandidateID = c.CandidateID
+            SELECT e.emailid, e.candidateid, c.fullname as candidatename, 
+                   e.emailtype, e.subject, e.body, e.issent, e.createdat, e.sentat
+            FROM emailqueue e
+            LEFT JOIN candidates c ON e.candidateid = c.candidateid
             WHERE 1=1
         `;
         const params = [];
 
         if (status === 'sent') {
-            queryStr += ` AND e.IsSent = 1`;
+            queryStr += ` AND e.issent = 1`;
         } else if (status === 'pending') {
-            queryStr += ` AND e.IsSent = 0`;
+            queryStr += ` AND e.issent = 0`;
         }
 
         if (type) {
-            queryStr += ` AND e.EmailType = ?`;
+            queryStr += ` AND e.emailtype = ?`;
             params.push(type);
         }
 
-        queryStr += ` ORDER BY e.CreatedAt DESC`;
+        queryStr += ` ORDER BY e.createdat DESC`;
 
         if (limit) {
-            // Replace the initial SELECT with SELECT TOP n
-            queryStr = queryStr.replace(/^SELECT /i, `SELECT TOP ${parseInt(limit)} `);
+            queryStr += ` LIMIT ${parseInt(limit)}`;
         }
 
         const emails = await query(queryStr, params);
@@ -245,10 +258,10 @@ router.get('/email-queue', protect, authorize(1), async (req, res) => {
         // Get stats
         const stats = await query(`
             SELECT 
-                COUNT(*) as Total,
-                SUM(CASE WHEN IsSent = 1 THEN 1 ELSE 0 END) as Sent,
-                SUM(CASE WHEN IsSent = 0 THEN 1 ELSE 0 END) as Pending
-            FROM EmailQueue
+                COUNT(*) as total,
+                SUM(CASE WHEN issent = 1 THEN 1 ELSE 0 END) as sent,
+                SUM(CASE WHEN issent = 0 THEN 1 ELSE 0 END) as pending
+            FROM emailqueue
         `);
 
         res.json({ emails, stats: stats[0] });
@@ -269,9 +282,9 @@ router.put('/email-queue/:id/retry', protect, authorize(1), async (req, res) => 
     try {
         // Reset IsSent to 0 to allow retry
         await query(`
-            UPDATE EmailQueue 
-            SET IsSent = 0, CreatedAt = GETDATE()
-            WHERE EmailID = ? AND IsSent = 0
+            UPDATE emailqueue 
+            SET issent = 0, createdat = NOW()
+            WHERE emailid = ? AND issent = 0
         `, [id]);
 
         res.json({ message: "Email queued for retry." });
@@ -290,7 +303,7 @@ router.delete('/email-queue/:id', protect, authorize(1), async (req, res) => {
     const { id } = req.params;
 
     try {
-        await query(`DELETE FROM EmailQueue WHERE EmailID = ?`, [id]);
+        await query(`DELETE FROM emailqueue WHERE emailid = ?`, [id]);
         res.json({ message: "Email deleted from queue." });
     } catch (err) {
         console.error("Email Delete Error:", err.message);
@@ -309,7 +322,7 @@ router.post('/email-queue/send-test', protect, authorize(1), async (req, res) =>
     try {
         // Insert into queue for processing
         await query(`
-            INSERT INTO EmailQueue (CandidateID, EmailType, Subject, Body, IsSent)
+            INSERT INTO emailqueue (candidateid, emailtype, subject, body, issent)
             VALUES (?, ?, ?, ?, 0)
         `, [candidateId, emailType || 'Test', subject || 'Test Email', body || 'This is a test email.']);
 
@@ -317,6 +330,68 @@ router.post('/email-queue/send-test', protect, authorize(1), async (req, res) =>
     } catch (err) {
         console.error("Test Email Error:", err.message);
         res.status(500).json({ error: "Failed to queue test email." });
+    }
+});
+
+// Get all SQL Views list
+router.get('/sql-views', async (req, res) => {
+    try {
+        const views = await query(`
+            SELECT 
+                table_name as viewname,
+                'SELECT * FROM ' || table_name as query
+            FROM information_schema.views 
+            WHERE table_schema = 'public'
+            ORDER BY table_name
+        `);
+        res.json(views);
+    } catch (err) {
+        console.error('SQL Views List Error:', err.message);
+        res.status(500).json({ error: 'Failed to get SQL views: ' + err.message });
+    }
+});
+
+// Execute a SQL View query and return results
+router.get('/sql-views/:viewName', async (req, res) => {
+    try {
+        const { viewName } = req.params;
+
+        // Validate view name to prevent SQL injection
+        const validViewPattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+        if (!validViewPattern.test(viewName)) {
+            return res.status(400).json({ error: 'Invalid view name' });
+        }
+
+        // Execute query - same pattern as analytics.js
+        const result = await query(`SELECT * FROM ${viewName}`);
+        res.json(result);
+    } catch (err) {
+        console.error('SQL View Query Error:', err.message);
+        res.status(500).json({ error: 'Failed to execute view query: ' + err.message });
+    }
+});
+
+// Get SQL View definition
+router.get('/view-definition/:viewName', async (req, res) => {
+    try {
+        const { viewName } = req.params;
+        // Validate view name to prevent SQL injection
+        const validViewPattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+        if (!validViewPattern.test(viewName)) {
+            return res.status(400).json({ error: 'Invalid view name' });
+        }
+
+        const result = await query(`
+            SELECT column_name, data_type, is_nullable 
+            FROM information_schema.columns 
+            WHERE table_name = ? AND table_schema = 'public'
+            ORDER BY ordinal_position
+        `, [viewName]);
+
+        res.json(result);
+    } catch (err) {
+        console.error('View Definition Error:', err.message);
+        res.status(500).json({ error: 'Failed to get view definition: ' + err.message });
     }
 });
 

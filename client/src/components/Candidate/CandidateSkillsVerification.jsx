@@ -16,16 +16,18 @@ const CandidateSkillsVerification = ({ assessments, profileSkills = [], loading,
     return (
         <div className="space-y-12">
 
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+                <Cpu className="w-5 h-5 text-indigo-500" />
+                <h2 className="text-lg font-black uppercase tracking-tighter">My Skills Profile</h2>
+                {profileSkills.length > 0 && (
+                    <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-500 text-[10px] font-black uppercase tracking-widest">{profileSkills.length} Skills</span>
+                )}
+            </div>
+
             {/* ── MY SKILLS (existing skills with proficiency) ── */}
             <div className="glass-card rounded-[3rem] p-10">
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-3">
-                        <Cpu className="w-5 h-5 text-indigo-500" />
-                        <h2 className="text-lg font-black uppercase tracking-tighter">My Skills Profile</h2>
-                        {profileSkills.length > 0 && (
-                            <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-500 text-[10px] font-black uppercase tracking-widest">{profileSkills.length} Skills</span>
-                        )}
-                    </div>
+                <div className="flex justify-end mb-8">
                     {onAddSkill && (
                         <button
                             onClick={onAddSkill}
@@ -164,7 +166,7 @@ const CandidateSkillsVerification = ({ assessments, profileSkills = [], loading,
                     onRefresh();
                 }}
             />
-        </div>
+        </div >
     );
 };
 

@@ -11,9 +11,9 @@ const { protect, authorize } = require('../middleware/rbac');
 router.get('/stats', protect, authorize([1, 2]), async (req, res) => {
     try {
         const results = await Promise.allSettled([
-            query("SELECT COUNT(*) as total FROM Candidates"),
-            query("SELECT COUNT(*) as total FROM vw_CandidateMatchScore WHERE TotalMatchScore > 80"),
-            query("SELECT COUNT(*) as total FROM JobPostings WHERE IsActive = 1 AND IsDeleted = 0")
+            query("SELECT COUNT(*) as total FROM candidates"),
+            query("SELECT COUNT(*) as total FROM vw_candidatematchscore WHERE totalmatchscore > 80"),
+            query("SELECT COUNT(*) as total FROM jobpostings WHERE isactive = true AND isdeleted = false")
         ]);
 
         const stats = {
@@ -36,7 +36,7 @@ router.get('/stats', protect, authorize([1, 2]), async (req, res) => {
  */
 router.get('/funnel', async (req, res) => {
     try {
-        const funnel = await query("SELECT * FROM vw_ApplicationFunnel");
+        const funnel = await query("SELECT * FROM vw_applicationfunnel");
         res.json(funnel);
     } catch (err) {
         console.error("Funnel Analytics Error:", err.message);
@@ -51,7 +51,7 @@ router.get('/funnel', async (req, res) => {
  */
 router.get('/utilization', async (req, res) => {
     try {
-        const utilization = await query("SELECT * FROM vw_VacancyUtilization");
+        const utilization = await query("SELECT * FROM vw_vacancyutilization");
         res.json(utilization);
     } catch (err) {
         console.error("Utilization Analytics Error:", err.message);
@@ -66,7 +66,7 @@ router.get('/utilization', async (req, res) => {
  */
 router.get('/per-job', protect, authorize([1, 2]), async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_HireRatePerJob");
+        const data = await query("SELECT * FROM vw_hirerateperjob");
         res.json(data);
     } catch (err) {
         console.error("Per-Job Analytics Error:", err.message);
@@ -81,7 +81,7 @@ router.get('/per-job', protect, authorize([1, 2]), async (req, res) => {
  */
 router.get('/bottlenecks', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_HiringBottlenecks");
+        const data = await query("SELECT * FROM vw_hiringbottlenecks");
         res.json(data);
     } catch (err) {
         console.error("Bottleneck Analytics Error:", err.message);
@@ -96,7 +96,7 @@ router.get('/bottlenecks', async (req, res) => {
  */
 router.get('/diversity', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_DiversityAnalyticsFunnel");
+        const data = await query("SELECT * FROM vw_diversityanalyticsfunnel");
         res.json(data);
     } catch (err) {
         console.error("Diversity Analytics Error:", err.message);
@@ -111,7 +111,7 @@ router.get('/diversity', async (req, res) => {
  */
 router.get('/diversity-gender', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_DiversityByGender");
+        const data = await query("SELECT * FROM vw_diversitybygender");
         res.json(data);
     } catch (err) {
         console.error("Diversity Gender Error:", err.message);
@@ -126,7 +126,7 @@ router.get('/diversity-gender', async (req, res) => {
  */
 router.get('/diversity-disability', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_DiversityByDisability");
+        const data = await query("SELECT * FROM vw_diversitybydisability");
         res.json(data);
     } catch (err) {
         console.error("Diversity Disability Error:", err.message);
@@ -141,7 +141,7 @@ router.get('/diversity-disability', async (req, res) => {
  */
 router.get('/diversity-veteran', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_DiversityByVeteran");
+        const data = await query("SELECT * FROM vw_diversitybyveteran");
         res.json(data);
     } catch (err) {
         console.error("Diversity Veteran Error:", err.message);
@@ -156,7 +156,7 @@ router.get('/diversity-veteran', async (req, res) => {
  */
 router.get('/market', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_MarketIntelligenceDashboard");
+        const data = await query("SELECT * FROM vw_marketintelligencedashboard");
         res.json(data);
     } catch (err) {
         console.error("Market Analytics Error:", err.message);
@@ -171,7 +171,7 @@ router.get('/market', async (req, res) => {
  */
 router.get('/salary-transparency', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_SalaryTransparency");
+        const data = await query("SELECT * FROM vw_salarytransparency");
         res.json(data);
     } catch (err) {
         console.error("Salary Transparency Error:", err.message);
@@ -186,14 +186,14 @@ router.get('/salary-transparency', async (req, res) => {
  */
 router.get('/remote-compatibility', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_RemoteCompatibilityMatrix");
+        const data = await query("SELECT * FROM vw_remotecompatibilitymatrix");
         // Map column names for frontend chart compatibility
         // Chart expects: { Role, RemoteScore }
-        // View returns: { JobTitle, OverallRemoteScore }
+        // View returns: { jobtitle, overallremotescore }
         const mapped = data.map(row => ({
             ...row,
-            Role: row.JobTitle,
-            RemoteScore: row.OverallRemoteScore
+            Role: row.jobtitle,
+            RemoteScore: row.overallremotescore
         }));
         res.json(mapped);
     } catch (err) {
@@ -209,7 +209,7 @@ router.get('/remote-compatibility', async (req, res) => {
  */
 router.get('/career-path', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_CareerPathInsights");
+        const data = await query("SELECT * FROM vw_careerpathinsights");
         res.json(data);
     } catch (err) {
         console.error("Career Path Error:", err.message);
@@ -224,7 +224,7 @@ router.get('/career-path', async (req, res) => {
  */
 router.get('/organizational-career', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_OrganizationalCareerInsights");
+        const data = await query("SELECT * FROM vw_organizationalcareerinsights");
         res.json(data);
     } catch (err) {
         console.error("Organizational Career Insights Error:", err.message);
@@ -239,7 +239,7 @@ router.get('/organizational-career', async (req, res) => {
  */
 router.get('/referral-intelligence', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_ReferralIntelligence");
+        const data = await query("SELECT * FROM vw_referralintelligence");
         res.json(data);
     } catch (err) {
         console.error("Referral Intelligence Error:", err.message);
@@ -255,8 +255,8 @@ router.get('/referral-intelligence', async (req, res) => {
 router.get('/risk-alerts', async (req, res) => {
     try {
         const [silent, ghosting] = await Promise.all([
-            query("SELECT TOP 5 * FROM vw_SilentRejections ORDER BY DaysInactive DESC"),
-            query("SELECT TOP 5 * FROM vw_GhostingRiskDashboard WHERE OverallRiskLevel = 'High'")
+            query("SELECT * FROM vw_silentrejections ORDER BY daysinactive DESC LIMIT 5"),
+            query("SELECT * FROM vw_ghostingriskdashboard WHERE overallrisklevel = 'High' LIMIT 5")
         ]);
 
         res.json({
@@ -279,21 +279,21 @@ router.get('/system-stats', protect, authorize(1), async (req, res) => {
         // Get recruitment stats
         const stats = await query(`
             SELECT 
-                (SELECT COUNT(*) FROM Candidates) AS CandidateCount,
-                (SELECT COUNT(*) FROM Users) AS UserCount,
-                (SELECT COUNT(*) FROM JobPostings WHERE IsDeleted = 0 AND IsActive = 1) AS ActiveJobCount,
-                (SELECT COUNT(*) FROM Applications WHERE IsDeleted = 0) AS TotalApplications,
-                (SELECT COUNT(*) FROM InterviewSchedules) AS ScheduledInterviews,
-                (SELECT COUNT(*) FROM Applications WHERE IsDeleted = 0 AND StatusID = 4) AS HiredCandidates
+                (SELECT COUNT(*) FROM candidates) AS candidatecount,
+                (SELECT COUNT(*) FROM users) AS usercount,
+                (SELECT COUNT(*) FROM jobpostings WHERE isdeleted = false AND isactive = true) AS activejobcount,
+                (SELECT COUNT(*) FROM applications WHERE isdeleted = false) AS totalapplications,
+                (SELECT COUNT(*) FROM interviewschedules) AS scheduledinterviews,
+                (SELECT COUNT(*) FROM applications WHERE isdeleted = false AND statusid = 4) AS hiredcandidates
         `);
 
         res.json({
-            candidates: stats[0]?.CandidateCount || 0,
-            users: stats[0]?.UserCount || 0,
-            activeJobs: stats[0]?.ActiveJobCount || 0,
-            totalApplications: stats[0]?.TotalApplications || 0,
-            scheduledInterviews: stats[0]?.ScheduledInterviews || 0,
-            hiredCandidates: stats[0]?.HiredCandidates || 0
+            candidates: stats[0]?.candidatecount || 0,
+            users: stats[0]?.usercount || 0,
+            activeJobs: stats[0]?.activejobcount || 0,
+            totalApplications: stats[0]?.totalapplications || 0,
+            scheduledInterviews: stats[0]?.scheduledinterviews || 0,
+            hiredCandidates: stats[0]?.hiredcandidates || 0
         });
     } catch (err) {
         console.error("System Stats Error:", err.message);
@@ -316,10 +316,10 @@ router.get('/system-stats', protect, authorize(1), async (req, res) => {
 router.get('/all-users', protect, authorize(1), async (req, res) => {
     try {
         const users = await query(`
-            SELECT u.UserID, u.Username, u.Email, u.RoleID, u.IsActive, r.RoleName
-            FROM Users u
-            LEFT JOIN Roles r ON u.RoleID = r.RoleID
-            ORDER BY u.UserID
+            SELECT u.userid, u.username, u.email, u.roleid, u.isactive, r.rolename
+            FROM users u
+            LEFT JOIN roles r ON u.roleid = r.roleid
+            ORDER BY u.userid
         `);
         res.json(users);
     } catch (err) {
@@ -336,10 +336,10 @@ router.get('/all-users', protect, authorize(1), async (req, res) => {
 router.get('/audit-logs', protect, authorize(1), async (req, res) => {
     try {
         const logs = await query(`
-            SELECT a.AuditID, a.TableName, a.RecordID, a.Operation, a.OldValue, a.NewValue, a.ChangedAt, u.Username as ChangedBy
-            FROM AuditLog a
-            LEFT JOIN Users u ON a.ChangedBy = u.UserID
-            ORDER BY a.ChangedAt DESC
+            SELECT a.auditid, a.tablename, a.recordid, a.operation, a.oldvalue, a.newvalue, a.changedat, u.username as changedby
+            FROM auditlog a
+            LEFT JOIN users u ON a.changedby = u.userid
+            ORDER BY a.changedat DESC
         `);
         res.json(logs);
     } catch (err) {
@@ -356,8 +356,8 @@ router.get('/audit-logs', protect, authorize(1), async (req, res) => {
 router.get('/bias-detection', async (req, res) => {
     try {
         const [location, experience] = await Promise.all([
-            query("SELECT * FROM vw_Bias_Location"),
-            query("SELECT * FROM vw_Bias_Experience")
+            query("SELECT * FROM vw_bias_location"),
+            query("SELECT * FROM vw_bias_experience")
         ]);
         res.json({ location, experience });
     } catch (err) {
@@ -373,7 +373,7 @@ router.get('/bias-detection', async (req, res) => {
  */
 router.get('/time-to-hire', protect, authorize([1, 2]), async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_AverageTimeToHire");
+        const data = await query("SELECT * FROM vw_averagetimetohire");
         res.json(data);
     } catch (err) {
         console.error("Time-to-Hire Error:", err.message);
@@ -388,7 +388,7 @@ router.get('/time-to-hire', protect, authorize([1, 2]), async (req, res) => {
  */
 router.get('/interview-scores', protect, authorize([1, 2]), async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_InterviewScoreVsDecision");
+        const data = await query("SELECT * FROM vw_interviewscorevsdecision");
         res.json(data);
     } catch (err) {
         console.error("Interview Scores Error:", err.message);
@@ -434,7 +434,7 @@ router.get('/interview-scores', protect, authorize([1, 2]), async (req, res) => 
  */
 router.get('/interviewer-consistency', protect, authorize(1), async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_InterviewerConsistency");
+        const data = await query("SELECT * FROM vw_interviewerconsistency");
         res.json(data);
     } catch (err) {
         console.error("Interviewer Consistency Error:", err.message);
@@ -449,7 +449,7 @@ router.get('/interviewer-consistency', protect, authorize(1), async (req, res) =
  */
 router.get('/interview-score-decision', protect, authorize(1), async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_InterviewScoreVsDecision");
+        const data = await query("SELECT * FROM vw_interviewscorevsdecision");
         res.json(data);
     } catch (err) {
         console.error("Interview Score vs Decision Error:", err.message);
@@ -464,7 +464,7 @@ router.get('/interview-score-decision', protect, authorize(1), async (req, res) 
  */
 router.get('/rejection-analysis', protect, authorize([1, 2]), async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_RejectionAnalysis");
+        const data = await query("SELECT * FROM vw_rejectionanalysis");
         res.json(data);
     } catch (err) {
         console.error("Rejection Analysis Error:", err.message);
@@ -479,59 +479,57 @@ router.get('/rejection-analysis', protect, authorize([1, 2]), async (req, res) =
  */
 router.get('/skill-gap', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_SkillGapAnalysis");
+        const data = await query("SELECT * FROM vw_skillgapanalysis");
 
         // Transform data to match frontend expectations
-        // Frontend expects: { SkillName, GapScore, DemandRank }
+        // Frontend expects: { SkillName, DemandScore, SupplyScore }
         // View returns: { SkillName, JobsRequiringSkill, CandidatesWithSkill, SkillGap }
 
         if (data && data.length > 0) {
-            // Calculate max values for normalization
-            const maxJobs = Math.max(...data.map(d => d.JobsRequiringSkill || 0));
-            const maxCandidates = Math.max(...data.map(d => d.CandidatesWithSkill || 0));
+            // Calculate max values for normalization to get percentages
+            const maxJobs = Math.max(...data.map(item => item.jobsrequiringskill || 0));
+            const maxCandidates = Math.max(...data.map(item => item.candidateswithskill || 0));
 
-            // Sort by JobsRequiringSkill to determine demand rank
-            const sortedByDemand = [...data].sort((a, b) => (b.JobsRequiringSkill || 0) - (a.JobsRequiringSkill || 0));
-
-            // Create a map for quick rank lookup
+            // Create a rank map for demand
             const demandRankMap = {};
-            sortedByDemand.forEach((item, index) => {
-                demandRankMap[item.SkillName] = index + 1;
+            [...data].sort((a, b) => (b.jobsrequiringskill || 0) - (a.jobsrequiringskill || 0)).forEach((item, index) => {
+                demandRankMap[item.skillname] = index + 1;
             });
 
             // Transform the data
             const transformedData = data.map(item => {
-                const jobsReq = item.JobsRequiringSkill || 0;
-                const candidates = item.CandidatesWithSkill || 0;
+                const jobsReq = item.jobsrequiringskill || 0;
+                const candidates = item.candidateswithskill || 0;
 
-                // Calculate GapScore: use demand-to-supply ratio when available
-                // Higher ratio = higher gap = more demand than supply
+                // Calculate DemandScore as percentage (0-100)
+                const demandScore = maxJobs > 0 ? Math.round((jobsReq / maxJobs) * 100) : 0;
+
+                // Calculate SupplyScore as percentage (0-100)
+                const supplyScore = maxCandidates > 0 ? Math.round((candidates / maxCandidates) * 100) : 0;
+
+                // Calculate GapScore
                 let gapScore;
                 if (candidates > 0) {
-                    // Ratio of jobs to candidates (more jobs per candidate = higher gap)
                     gapScore = Math.min(100, Math.round((jobsReq / candidates) * 50));
                 } else if (jobsReq > 0) {
-                    // No candidates have this skill but it's in demand = max gap
                     gapScore = 100;
                 } else {
-                    // Neither jobs nor candidates = no gap
                     gapScore = 0;
                 }
 
                 return {
-                    SkillName: item.SkillName,
-                    // Use calculated gap score
+                    SkillName: item.skillname,
+                    DemandScore: demandScore,
+                    SupplyScore: supplyScore,
                     GapScore: gapScore,
-                    // Demand rank based on jobs requiring the skill
-                    DemandRank: demandRankMap[item.SkillName] || 0,
-                    // Keep original values for reference
+                    DemandRank: demandRankMap[item.skillname] || 0,
                     JobsRequiringSkill: jobsReq,
                     CandidatesWithSkill: candidates,
-                    SkillGap: item.SkillGap
+                    SkillGap: item.skillgap
                 };
             });
 
-            // Sort by GapScore descending for the chart
+            // Sort by GapScore descending
             transformedData.sort((a, b) => b.GapScore - a.GapScore);
 
             res.json(transformedData);
@@ -551,7 +549,7 @@ router.get('/skill-gap', async (req, res) => {
  */
 router.get('/candidate-engagement', protect, authorize([1, 2]), async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_CandidateEngagement");
+        const data = await query("SELECT * FROM vw_candidateengagement");
         res.json(data);
     } catch (err) {
         console.error("Candidate Engagement Error:", err.message);
@@ -566,7 +564,7 @@ router.get('/candidate-engagement', protect, authorize([1, 2]), async (req, res)
  */
 router.get('/hire-rate-per-job', protect, authorize(1), async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_HireRatePerJob");
+        const data = await query("SELECT * FROM vw_hirerateperjob");
         res.json(data);
     } catch (err) {
         console.error("Hire Rate Per Job Error:", err.message);
@@ -581,7 +579,7 @@ router.get('/hire-rate-per-job', protect, authorize(1), async (req, res) => {
  */
 router.get('/time-to-hire-individual', protect, authorize(1), async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_TimeToHire ORDER BY DaysToHire DESC");
+        const data = await query("SELECT * FROM vw_timetohire ORDER BY daystohire DESC");
         res.json(data);
     } catch (err) {
         console.error("Time-to-Hire Individual Error:", err.message);
@@ -596,7 +594,7 @@ router.get('/time-to-hire-individual', protect, authorize(1), async (req, res) =
  */
 router.get('/ghosting-detail', protect, authorize([1, 2]), async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_GhostingRiskDashboard ORDER BY OverallRiskScore DESC");
+        const data = await query("SELECT * FROM vw_ghostingriskdashboard ORDER BY overallriskscore DESC");
         res.json(data);
     } catch (err) {
         console.error("Ghosting Detail Error:", err.message);
@@ -611,7 +609,7 @@ router.get('/ghosting-detail', protect, authorize([1, 2]), async (req, res) => {
  */
 router.get('/skill-verification', protect, authorize([1, 2]), async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_SkillVerificationStatus");
+        const data = await query("SELECT * FROM vw_skillverificationstatus");
         res.json(data);
     } catch (err) {
         console.error("Skill Verification Error:", err.message);
@@ -630,20 +628,20 @@ router.get('/time-to-hire-detail', protect, authorize([1, 2]), async (req, res) 
         // Using simpler Source detection to avoid potential table issues
         const data = await query(`
             SELECT 
-                a.ApplicationID,
-                c.FullName AS CandidateName,
-                j.JobTitle,
-                a.AppliedDate,
-                h.ChangedAt AS HiredDate,
-                DATEDIFF(DAY, a.AppliedDate, h.ChangedAt) AS DaysToHire,
-                'Hired' AS ApplicationStatus,
-                'Direct' AS Source
-            FROM Applications a
-            JOIN Candidates c ON a.CandidateID = c.CandidateID
-            JOIN JobPostings j ON a.JobID = j.JobID
-            JOIN ApplicationStatusHistory h ON a.ApplicationID = h.ApplicationID
-            WHERE h.ToStatusID = (SELECT StatusID FROM ApplicationStatus WHERE StatusName = 'Hired')
-            ORDER BY DaysToHire DESC
+                a.applicationid,
+                c.fullname AS candidatename,
+                j.jobtitle,
+                a.applieddate,
+                h.changedat AS hireddate,
+                (h.changedat::date - a.applieddate::date) AS daystohire,
+                'Hired' AS applicationstatus,
+                'Direct' AS source
+            FROM applications a
+            JOIN candidates c ON a.candidateid = c.candidateid
+            JOIN jobpostings j ON a.jobid = j.jobid
+            JOIN applicationstatushistory h ON a.applicationid = h.applicationid
+            WHERE h.to_statusid = (SELECT statusid FROM applicationstatus WHERE statusname = 'Hired')
+            ORDER BY daystohire DESC
         `);
         res.json(data);
     } catch (err) {
@@ -659,7 +657,7 @@ router.get('/time-to-hire-detail', protect, authorize([1, 2]), async (req, res) 
  */
 router.get('/recruiter-performance', async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_RecruiterPerformance");
+        const data = await query("SELECT * FROM vw_recruiterperformance");
         res.json(data);
     } catch (err) {
         console.error("Recruiter Performance Error:", err.message);
@@ -676,24 +674,24 @@ router.get('/consent-status', protect, authorize(1), async (req, res) => {
     try {
         const data = await query(`
             SELECT 
-                cm.ConsentID,
-                cm.CandidateID,
-                c.FullName AS CandidateName,
-                cm.ConsentType,
-                cm.ConsentVersion,
-                cm.IsActive,
-                cm.GivenAt,
-                cm.ExpiryDate,
-                cm.RevokedAt,
+                cm.consentid,
+                cm.candidateid,
+                c.fullname AS candidatename,
+                cm.consenttype,
+                cm.consentversion,
+                cm.isactive,
+                cm.givenat,
+                cm.expirydate,
+                cm.revokedat,
                 CASE 
-                    WHEN cm.RevokedAt IS NOT NULL THEN 'Revoked'
-                    WHEN cm.ExpiryDate < GETDATE() THEN 'Expired'
-                    WHEN cm.IsActive = 1 THEN 'Active'
+                    WHEN cm.revokedat IS NOT NULL THEN 'Revoked'
+                    WHEN cm.expirydate < NOW() THEN 'Expired'
+                    WHEN cm.isactive = true THEN 'Active'
                     ELSE 'Revoked'
-                END AS Status
-            FROM ConsentManagement cm
-            JOIN Candidates c ON cm.CandidateID = c.CandidateID
-            ORDER BY cm.GivenAt DESC
+                END AS status
+            FROM consentmanagement cm
+            JOIN candidates c ON cm.candidateid = c.candidateid
+            ORDER BY cm.givenat DESC
         `);
         res.json(data);
     } catch (err) {
@@ -709,7 +707,7 @@ router.get('/consent-status', protect, authorize(1), async (req, res) => {
  */
 router.get('/vacancy-overview', protect, authorize(1), async (req, res) => {
     try {
-        const data = await query("SELECT * FROM vw_VacancyUtilization");
+        const data = await query("SELECT * FROM vw_vacancyutilization");
         res.json(data);
     } catch (err) {
         console.error("Vacancy Overview Error:", err.message);
@@ -731,21 +729,21 @@ router.post('/predict-hire-success', protect, authorize([1, 2]), async (req, res
             return res.status(400).json({ error: "Application ID is required." });
         }
 
-        // Call the stored procedure for Rules-Based AI prediction
-        const result = await query(`EXEC sp_PredictHireSuccess ?`, [applicationId]);
+        // Call the function for Rules-Based AI prediction
+        const result = await query(`SELECT * FROM sp_PredictHireSuccess(?)`, [applicationId]);
 
         if (result && result.length > 0) {
             res.json({
                 success: true,
                 prediction: {
-                    successProbability: result[0].SuccessProbabilityPercent,
-                    confidenceLevel: result[0].ConfidenceLevel,
-                    factors: {
-                        skillMatch: result[0].SkillMatchPercent,
-                        experienceMatch: result[0].ExperienceMatchPercent,
-                        interviewScore: result[0].InterviewScorePercent,
-                        responseEngagement: result[0].ResponseEngagementPercent,
-                        historicalSuccess: result[0].HistoricalSuccessRate
+                    successProbability: result[0].successprobabilitypercent,
+                    confidence: result[0].confidencelevel,
+                    breakdown: {
+                        skills: result[0].skillmatchpercent,
+                        experience: result[0].experiencematchpercent,
+                        interview: result[0].interviewscorepercent,
+                        engagement: result[0].responseengagementpercent,
+                        history: result[0].historicalsuccessrate
                     }
                 }
             });
@@ -768,25 +766,35 @@ router.get('/applications-for-prediction', protect, authorize([1, 2]), async (re
         // MatchScore is from vw_CandidateMatchScore, not Applications table
         const data = await query(`
             SELECT 
-                a.ApplicationID,
-                a.CandidateID,
-                c.FullName AS CandidateName,
-                j.JobID,
-                j.JobTitle,
-                a.StatusID,
-                s.StatusName,
-                ISNULL(m.TotalMatchScore, 0) AS MatchScore,
-                c.YearsOfExperience,
-                j.MinExperience,
-                a.AppliedDate
-            FROM Applications a
-            JOIN Candidates c ON a.CandidateID = c.CandidateID
-            JOIN JobPostings j ON a.JobID = j.JobID
-            LEFT JOIN ApplicationStatus s ON a.StatusID = s.StatusID
-            LEFT JOIN vw_CandidateMatchScore m ON a.CandidateID = m.CandidateID AND a.JobID = m.JobID
-            WHERE a.IsDeleted = 0
-                AND a.StatusID IN (1, 2, 3, 7)
-            ORDER BY a.AppliedDate DESC
+                a.applicationid,
+                a.candidateid,
+                c.fullname AS candidatename,
+                j.jobtitle,
+                s.statusname,
+                a.applieddate,
+                h.changedat AS laststatusdate,
+                (h.changedat::date - a.applieddate::date) AS daysinstatus,
+                COALESCE(avg_time.avgdays, 0) AS avgdaysinstage
+            FROM applications a
+            JOIN candidates c ON a.candidateid = c.candidateid
+            JOIN jobpostings j ON a.jobid = j.jobid
+            JOIN applicationstatus s ON a.statusid = s.statusid
+            JOIN applicationstatushistory h ON a.applicationid = h.applicationid
+            LEFT JOIN (
+                SELECT statusid, AVG(daysinstatus) AS avgdays
+                FROM (
+                    SELECT statusid, (changedat::date - lag(changedat::date) OVER (PARTITION BY applicationid ORDER BY changedat)) AS daysinstatus
+                    FROM applicationstatushistory
+                ) sub
+                GROUP BY statusid
+            ) avg_time ON a.statusid = avg_time.statusid
+            WHERE h.to_statusid = a.statusid
+              AND (
+                SELECT MAX(changedat) 
+                FROM applicationstatushistory 
+                WHERE applicationid = a.applicationid
+              ) = h.changedat
+            ORDER BY daysinstatus DESC
         `);
         res.json(data);
     } catch (err) {
@@ -805,26 +813,26 @@ router.get('/hire-success-predictions', protect, authorize([1, 2]), async (req, 
     try {
         const data = await query(`
             SELECT 
-                p.PredictionID,
-                p.CandidateID,
-                c.FullName AS CandidateName,
-                j.JobTitle,
-                p.SuccessProbability,
-                p.KeyFactors,
-                c.YearsOfExperience,
-                a.StatusID,
-                s.StatusName,
+                p.predictionid,
+                p.candidateid,
+                c.fullname AS candidatename,
+                j.jobtitle,
+                p.successprobability,
+                p.keyfactors,
+                c.yearsofexperience,
+                a.statusid,
+                s.statusname,
                 CASE 
-                    WHEN p.SuccessProbability >= 0.8 THEN 'High'
-                    WHEN p.SuccessProbability >= 0.6 THEN 'Medium'
+                    WHEN p.successprobability >= 0.8 THEN 'High'
+                    WHEN p.successprobability >= 0.6 THEN 'Medium'
                     ELSE 'Low'
-                END AS ConfidenceLevel
-            FROM AI_Predictions p
-            JOIN Candidates c ON p.CandidateID = c.CandidateID
-            JOIN JobPostings j ON p.JobID = j.JobID
-            LEFT JOIN Applications a ON p.ApplicationID = a.ApplicationID
-            LEFT JOIN ApplicationStatus s ON a.StatusID = s.StatusID
-            ORDER BY p.PredictionID DESC
+                END AS confidencelevel
+            FROM ai_predictions p
+            JOIN candidates c ON p.candidateid = c.candidateid
+            JOIN jobpostings j ON p.jobid = j.jobid
+            LEFT JOIN applications a ON p.applicationid = a.applicationid
+            LEFT JOIN applicationstatus s ON a.statusid = s.statusid
+            ORDER BY p.predictionid DESC
         `);
         res.json(data);
     } catch (err) {
@@ -847,18 +855,18 @@ router.post('/predict-onboarding-success', protect, authorize([1, 2]), async (re
             return res.status(400).json({ error: "Candidate ID and Job ID are required." });
         }
 
-        // Call the stored procedure for onboarding success prediction
-        const result = await query(`EXEC sp_PredictOnboardingSuccess ?, ?`, [candidateId, jobId]);
+        // Call the function for onboarding success prediction
+        const result = await query(`SELECT * FROM sp_PredictOnboardingSuccess(?, ?)`, [candidateId, jobId]);
 
         if (result && result.length > 0) {
             res.json({
                 success: true,
                 prediction: {
-                    successProbability: result[0].SuccessProbability,
-                    riskLevel: result[0].RiskLevel,
-                    riskFactors: result[0].RiskFactors,
-                    recommendations: result[0].Recommendations,
-                    predictedRetentionMonths: result[0].PredictedRetentionMonths
+                    successProbability: result[0].successprobability,
+                    riskLevel: result[0].risklevel,
+                    riskFactors: result[0].riskfactors,
+                    recommendations: result[0].recommendations,
+                    predictedRetentionMonths: result[0].predictedretentionmonths
                 }
             });
         } else {
@@ -879,27 +887,27 @@ router.get('/hired-candidates', protect, authorize([1, 2]), async (req, res) => 
     try {
         const data = await query(`
             SELECT 
-                a.ApplicationID,
-                a.CandidateID,
-                c.FullName AS CandidateName,
-                j.JobID,
-                j.JobTitle,
-                a.StatusID,
-                s.StatusName,
-                h.ChangedAt AS HiredDate,
-                DATEDIFF(DAY, h.ChangedAt, GETDATE()) AS DaysSinceHired,
-                c.YearsOfExperience,
-                rc.OverallRemoteScore
-            FROM Applications a
-            JOIN Candidates c ON a.CandidateID = c.CandidateID
-            JOIN JobPostings j ON a.JobID = j.JobID
-            JOIN ApplicationStatus s ON a.StatusID = s.StatusID
-            JOIN ApplicationStatusHistory h ON a.ApplicationID = h.ApplicationID
-            LEFT JOIN RemoteCompatibility rc ON c.CandidateID = rc.CandidateID
-            WHERE a.StatusID = 4
-                AND h.ToStatusID = 4
-                AND a.IsDeleted = 0
-            ORDER BY h.ChangedAt DESC
+                a.applicationid,
+                a.candidateid,
+                c.fullname AS candidatename,
+                j.jobid,
+                j.jobtitle,
+                a.statusid,
+                s.statusname,
+                h.changedat AS hireddate,
+                (NOW()::date - h.changedat::date) AS dayssincehired,
+                c.yearsofexperience,
+                rc.overallremotescore
+            FROM applications a
+            JOIN candidates c ON a.candidateid = c.candidateid
+            JOIN jobpostings j ON a.jobid = j.jobid
+            JOIN applicationstatus s ON a.statusid = s.statusid
+            JOIN applicationstatushistory h ON a.applicationid = h.applicationid
+            LEFT JOIN remotecompatibility rc ON c.candidateid = rc.candidateid
+            WHERE a.statusid = 4
+                AND h.to_statusid = 4
+                AND a.isdeleted = false
+            ORDER BY h.changedat DESC
         `);
         res.json(data);
     } catch (err) {
@@ -917,20 +925,20 @@ router.get('/onboarding-predictions', protect, authorize([1, 2]), async (req, re
     try {
         const data = await query(`
             SELECT 
-                op.PredictionID,
-                op.CandidateID,
-                c.FullName AS CandidateName,
-                j.JobTitle,
-                op.SuccessProbability,
-                op.RiskLevel,
-                op.RiskFactors,
-                op.Recommendations,
-                op.PredictedRetentionMonths,
-                op.PredictedAt
-            FROM OnboardingPredictions op
-            JOIN Candidates c ON op.CandidateID = c.CandidateID
-            JOIN JobPostings j ON op.JobID = j.JobID
-            ORDER BY op.PredictedAt DESC
+                op.predictionid,
+                op.candidateid,
+                c.fullname AS candidatename,
+                j.jobtitle,
+                op.successprobability,
+                op.risklevel,
+                op.riskfactors,
+                op.recommendations,
+                op.predictedretentionmonths,
+                op.predictedat
+            FROM onboardingpredictions op
+            JOIN candidates c ON op.candidateid = c.candidateid
+            JOIN jobpostings j ON op.jobid = j.jobid
+            ORDER BY op.predictedat DESC
         `);
         res.json(data);
     } catch (err) {
@@ -950,64 +958,65 @@ router.get('/sentiment-trends', protect, authorize([1, 2]), async (req, res) => 
         // Get overall sentiment statistics
         const overallStats = await query(`
             SELECT 
-                COUNT(*) AS TotalInteractions,
-                ISNULL(AVG(SentimentScore), 0) AS AvgSentimentScore,
-                ISNULL(AVG(Confidence), 0) AS AvgConfidence,
-                ISNULL(SUM(RedFlagsDetected), 0) AS TotalRedFlags,
-                ISNULL(SUM(PositiveIndicators), 0) AS TotalPositiveIndicators
-            FROM CandidateSentiment
+                COUNT(*) AS totalinteractions,
+                COALESCE(AVG(sentimentscore), 0) AS avgsentimentscore,
+                COALESCE(AVG(confidence), 0) AS avgconfidence,
+                COALESCE(SUM(redflagsdetected), 0) AS totalredflags,
+                COALESCE(SUM(positiveindicators), 0) AS totalpositiveindicators
+            FROM candidatesentiment
         `);
 
         // Get sentiment by interaction type
         const byType = await query(`
             SELECT 
-                InteractionType,
-                COUNT(*) AS Count,
-                AVG(SentimentScore) AS AvgSentiment,
-                AVG(Confidence) AS AvgConfidence
-            FROM CandidateSentiment
-            GROUP BY InteractionType
-            ORDER BY Count DESC
+                interactiontype,
+                COUNT(*) AS count,
+                AVG(sentimentscore) AS avgsentiment,
+                AVG(confidence) AS avgconfidence
+            FROM candidatesentiment
+            GROUP BY interactiontype
+            ORDER BY count DESC
         `);
 
         // Get sentiment trend over time (last 30 days)
         const trend = await query(`
             SELECT 
-                CAST(InteractionDate AS DATE) AS Date,
-                COUNT(*) AS InteractionCount,
-                AVG(SentimentScore) AS AvgSentiment
-            FROM CandidateSentiment
-            WHERE InteractionDate >= DATEADD(day, -30, GETDATE())
-            GROUP BY CAST(InteractionDate AS DATE)
-            ORDER BY Date DESC
+                CAST(interactiondate AS DATE) AS date,
+                COUNT(*) AS interactioncount,
+                AVG(sentimentscore) AS avgsentiment
+            FROM candidatesentiment
+            WHERE interactiondate >= NOW() - INTERVAL '30 days'
+            GROUP BY CAST(interactiondate AS DATE)
+            ORDER BY date DESC
         `);
 
         // Get candidates with declining sentiment (at-risk)
         const atRisk = await query(`
-            SELECT TOP 10
-                c.CandidateID,
-                c.FullName,
-                AVG(cs.SentimentScore) AS AvgSentiment,
-                SUM(cs.RedFlagsDetected) AS RedFlags,
-                MAX(cs.InteractionDate) AS LastInteraction
-            FROM CandidateSentiment cs
-            JOIN Candidates c ON cs.CandidateID = c.CandidateID
-            WHERE cs.InteractionDate >= DATEADD(day, -14, GETDATE())
-            GROUP BY c.CandidateID, c.FullName
-            HAVING AVG(cs.SentimentScore) < 0
-            ORDER BY AvgSentiment ASC
+            SELECT 
+                c.candidateid,
+                c.fullname,
+                AVG(cs.sentimentscore) AS avgsentiment,
+                SUM(cs.redflagsdetected) AS redflags,
+                MAX(cs.interactiondate) AS lastinteraction
+            FROM candidatesentiment cs
+            JOIN candidates c ON cs.candidateid = c.candidateid
+            WHERE cs.interactiondate >= NOW() - INTERVAL '14 days'
+            GROUP BY c.candidateid, c.fullname
+            HAVING AVG(cs.sentimentscore) < 0
+            ORDER BY avgsentiment ASC
+            LIMIT 10
         `);
 
         // Get communication style distribution
         const styleDistribution = await query(`
             SELECT 
-                CommunicationStyle,
-                COUNT(*) AS Count,
-                AVG(SentimentScore) AS AvgSentiment
-            FROM CandidateSentiment
-            WHERE CommunicationStyle IS NOT NULL
-            GROUP BY CommunicationStyle
-            ORDER BY Count DESC
+                communicationstyle,
+                COUNT(*) AS count,
+                AVG(sentimentscore) AS avgsentiment
+            FROM candidatesentiment
+            WHERE communicationstyle IS NOT NULL
+            GROUP BY communicationstyle
+            ORDER BY count DESC
         `);
 
         res.json({
@@ -1032,29 +1041,29 @@ router.get('/sentiment-at-risk', protect, authorize([1, 2]), async (req, res) =>
     try {
         const atRiskCandidates = await query(`
             SELECT 
-                c.CandidateID,
-                c.FullName,
-                c.Location,
-                c.YearsOfExperience,
-                COUNT(cs.SentimentID) AS TotalInteractions,
-                AVG(cs.SentimentScore) AS AvgSentimentScore,
-                SUM(cs.RedFlagsDetected) AS TotalRedFlags,
-                SUM(cs.PositiveIndicators) AS TotalPositiveIndicators,
-                MAX(cs.InteractionDate) AS LastInteraction,
-                MIN(cs.SentimentScore) AS LowestScore,
-                MAX(cs.SentimentScore) AS HighestScore,
+                c.candidateid,
+                c.fullname,
+                c.location,
+                c.yearsofexperience,
+                COUNT(cs.sentimentid) AS totalinteractions,
+                AVG(cs.sentimentscore) AS avgsentimentscore,
+                SUM(cs.redflagsdetected) AS totalredflags,
+                SUM(cs.positiveindicators) AS totalpositiveindicators,
+                MAX(cs.interactiondate) AS lastinteraction,
+                MIN(cs.sentimentscore) AS lowestscore,
+                MAX(cs.sentimentscore) AS highestscore,
                 -- Calculate sentiment trend (recent vs older)
                 CASE 
-                    WHEN AVG(CASE WHEN cs.InteractionDate >= DATEADD(day, -7, GETDATE()) THEN cs.SentimentScore ELSE NULL END) <
-                         AVG(CASE WHEN cs.InteractionDate < DATEADD(day, -7, GETDATE()) THEN cs.SentimentScore ELSE NULL END)
+                    WHEN AVG(CASE WHEN cs.interactiondate >= NOW() - INTERVAL '7 days' THEN cs.sentimentscore ELSE NULL END) <
+                         AVG(CASE WHEN cs.interactiondate < NOW() - INTERVAL '7 days' THEN cs.sentimentscore ELSE NULL END)
                     THEN 'Declining'
                     ELSE 'Stable'
-                END AS Trend
-            FROM CandidateSentiment cs
-            JOIN Candidates c ON cs.CandidateID = c.CandidateID
-            GROUP BY c.CandidateID, c.FullName, c.Location, c.YearsOfExperience
-            HAVING AVG(cs.SentimentScore) < 0.2 OR SUM(cs.RedFlagsDetected) > 2
-            ORDER BY AvgSentimentScore ASC
+                END AS trend
+            FROM candidatesentiment cs
+            JOIN candidates c ON cs.candidateid = c.candidateid
+            GROUP BY c.candidateid, c.fullname, c.location, c.yearsofexperience
+            HAVING AVG(cs.sentimentscore) < 0.2 OR SUM(cs.redflagsdetected) > 2
+            ORDER BY avgsentimentscore ASC
         `);
 
         res.json(atRiskCandidates);
@@ -1072,12 +1081,12 @@ router.get('/sentiment-at-risk', protect, authorize([1, 2]), async (req, res) =>
 router.get('/diversity-goals', protect, authorize([1, 2]), async (req, res) => {
     try {
         const data = await query(`
-            SELECT dg.GoalID, dg.MetricType, dg.TargetPercentage, dg.CurrentPercentage, 
-                   dg.StartDate, dg.EndDate, dg.IsActive, u.Username as RecruiterName
-            FROM DiversityGoals dg
-            LEFT JOIN Recruiters r ON dg.RecruiterID = r.RecruiterID
-            LEFT JOIN Users u ON r.UserID = u.UserID
-            ORDER BY dg.StartDate DESC
+            SELECT dg.goalid, dg.metrictype, dg.targetpercentage, dg.currentpercentage, 
+                   dg.startdate, dg.enddate, dg.isactive, u.username as recruitername
+            FROM diversitygoals dg
+            LEFT JOIN recruiters r ON dg.recruiterid = r.recruiterid
+            LEFT JOIN users u ON r.userid = u.userid
+            ORDER BY dg.startdate DESC
         `);
         res.json(data);
     } catch (err) {
@@ -1094,24 +1103,24 @@ router.get('/diversity-goals', protect, authorize([1, 2]), async (req, res) => {
 router.post('/diversity-goals', protect, authorize([1, 2]), async (req, res) => {
     try {
         const { metricType, targetPercentage, startDate, endDate } = req.body;
-        const userID = req.user.UserID;
+        const userid = req.user.userid;
 
         // Get recruiter ID (nullable for Admins who might not have a recruiter record)
         let recruiterID = null;
-        const recruiter = await query("SELECT RecruiterID FROM Recruiters WHERE UserID = ?", [userID]);
+        const recruiter = await query("SELECT recruiterid FROM recruiters WHERE userid = ?", [userid]);
         if (recruiter.length > 0) {
-            recruiterID = recruiter[0].RecruiterID;
+            recruiterID = recruiter[0].recruiterid;
         }
 
         const result = await query(`
-            INSERT INTO DiversityGoals (RecruiterID, MetricType, TargetPercentage, CurrentPercentage, StartDate, EndDate, IsActive)
-            OUTPUT inserted.GoalID
-            VALUES (?, ?, ?, 0, ?, ?, 1)
+            INSERT INTO diversitygoals (recruiterid, metrictype, targetpercentage, currentpercentage, startdate, enddate, isactive)
+            VALUES (?, ?, ?, 0, ?, ?, true)
+            RETURNING goalid
         `, [recruiterID, metricType, targetPercentage, startDate, endDate]);
 
         res.status(201).json({
             success: true,
-            goalId: result[0].GoalID,
+            goalId: result[0].goalid,
             message: "Diversity goal created successfully."
         });
     } catch (err) {
@@ -1128,13 +1137,13 @@ router.post('/diversity-goals', protect, authorize([1, 2]), async (req, res) => 
 router.get('/bias-logs', protect, authorize([1, 2]), async (req, res) => {
     try {
         const data = await query(`
-            SELECT bdl.DetectionID, bdl.DetectionType, bdl.Severity, bdl.Details, 
-                   bdl.SuggestedActions, bdl.DetectedAt, bdl.ResolvedAt, bdl.IsResolved,
-                   u.Username as RecruiterName
-            FROM BiasDetectionLogs bdl
-            LEFT JOIN Recruiters r ON bdl.RecruiterID = r.RecruiterID
-            LEFT JOIN Users u ON r.UserID = u.UserID
-            ORDER BY bdl.DetectedAt DESC
+            SELECT bdl.detectionid, bdl.detectiontype, bdl.severity, bdl.details, 
+                   bdl.suggestedactions, bdl.detectedat, bdl.resolvedat, bdl.isresolved,
+                   u.username as recruitername
+            FROM biasdetectionlogs bdl
+            LEFT JOIN recruiters r ON bdl.recruiterid = r.recruiterid
+            LEFT JOIN users u ON r.userid = u.userid
+            ORDER BY bdl.detectedat DESC
         `);
         res.json(data);
     } catch (err) {
@@ -1153,9 +1162,9 @@ router.put('/bias-logs/:id/resolve', protect, authorize(1), async (req, res) => 
         const { id } = req.params;
 
         await query(`
-            UPDATE BiasDetectionLogs 
-            SET IsResolved = 1, ResolvedAt = GETDATE()
-            WHERE DetectionID = ?
+            UPDATE biasdetectionlogs 
+            SET isresolved = true, resolvedat = NOW()
+            WHERE detectionid = ?
         `, [id]);
 
         res.json({ success: true, message: "Bias log marked as resolved." });

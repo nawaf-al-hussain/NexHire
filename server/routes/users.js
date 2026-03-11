@@ -11,10 +11,10 @@ const { protect, authorize } = require('../middleware/rbac');
 router.get('/', protect, authorize(1), async (req, res) => {
     try {
         const users = await query(`
-            SELECT u.UserID, u.Username, u.Email, u.RoleID, u.IsActive, u.CreatedAt, r.RoleName
-            FROM Users u
-            LEFT JOIN Roles r ON u.RoleID = r.RoleID
-            ORDER BY u.CreatedAt DESC
+            SELECT u.userid, u.username, u.email, u.roleid, u.isactive, u.createdat, r.rolename
+            FROM users u
+            LEFT JOIN roles r ON u.roleid = r.roleid
+            ORDER BY u.createdat DESC
         `);
         res.json(users);
     } catch (err) {
@@ -35,7 +35,7 @@ router.put('/:id/role', protect, authorize(1), async (req, res) => {
     if (!roleID) return res.status(400).json({ error: "Role ID is required." });
 
     try {
-        await query("UPDATE Users SET RoleID = ? WHERE UserID = ?", [roleID, id]);
+        await query("UPDATE users SET roleid = ? WHERE userid = ?", [roleID, id]);
         res.json({ message: "User role updated successfully." });
     } catch (err) {
         console.error("Update Role Error:", err.message);
@@ -55,7 +55,7 @@ router.put('/:id/status', protect, authorize(1), async (req, res) => {
     if (isActive === undefined) return res.status(400).json({ error: "IsActive status is required." });
 
     try {
-        await query("UPDATE Users SET IsActive = ? WHERE UserID = ?", [isActive ? 1 : 0, id]);
+        await query("UPDATE users SET isactive = ? WHERE userid = ?", [isActive ? true : false, id]);
         res.json({ message: "User status updated successfully." });
     } catch (err) {
         console.error("Update Status Error:", err.message);
@@ -76,24 +76,35 @@ router.post('/candidate', async (req, res) => {
     }
 
     try {
-        // 1. Hash the password using the C# CLR function
-        const hashResult = await query("SELECT dbo.HashPassword(?) AS Hash", [password]);
-        const passwordHash = hashResult[0].Hash;
+        // 1. Hash the password using the PostgreSQL function
+        const hashResult = await query("SELECT hashpassword(?) AS hash", [password]);
+        const passwordHash = hashResult[0].hash;
 
-        // 2. Insert into Users table (RoleID 3 = Candidate)
-        // Using OUTPUT inserted.UserID for transactional integrity
-        const userResult = await query(`
-            INSERT INTO Users (Username, Email, PasswordHash, RoleID, IsActive)
-            OUTPUT inserted.UserID
-            VALUES (?, ?, ?, 3, 1)`,
+        // 2. Insert into users table (roleid 3 = Candidate)
+        await query(`
+            INSERT INTO users (username, email, passwordhash, roleid, isactive)
+            VALUES (?, ?, ?, 3, true)`,
             [username, email, passwordHash]
         );
 
-        const newUserId = userResult[0].UserID;
+        // Get the newly created userid
+        const userResult = await query(`
+            SELECT userid FROM users 
+            WHERE username = ? AND email = ? 
+            ORDER BY userid DESC
+            LIMIT 1`,
+            [username, email]
+        );
 
-        // 3. Create the Candidate Profile linking to the new UserID
+        if (userResult.length === 0) {
+            throw new Error("Failed to retrieve new user ID");
+        }
+
+        const newUserId = userResult[0].userid;
+
+        // 3. Create the Candidate Profile linking to the new userid
         await query(`
-            INSERT INTO Candidates (UserID, FullName, Location, YearsOfExperience)
+            INSERT INTO candidates (userid, fullname, location, yearsofexperience)
             VALUES (?, ?, ?, ?)`,
             [newUserId, fullName, location || 'N/A', yearsOfExperience || 0]
         );
@@ -122,7 +133,7 @@ router.get('/profile/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
         const users = await query(
-            "SELECT UserID, Username, Email, RoleID FROM Users WHERE UserID = ?",
+            "SELECT userid, username, email, roleid FROM users WHERE userid = ?",
             [userId]
         );
 
@@ -132,11 +143,11 @@ router.get('/profile/:userId', async (req, res) => {
         let profile = {};
 
         // Fetch role-specific profile data
-        if (user.RoleID === 3) { // Candidate
-            const cand = await query("SELECT * FROM Candidates WHERE UserID = ?", [userId]);
+        if (user.roleid === 3) { // Candidate
+            const cand = await query("SELECT * FROM candidates WHERE userid = ?", [userId]);
             profile = cand[0] || {};
-        } else if (user.RoleID === 2) { // Recruiter
-            const rec = await query("SELECT * FROM Recruiters WHERE UserID = ?", [userId]);
+        } else if (user.roleid === 2) { // Recruiter
+            const rec = await query("SELECT * FROM recruiters WHERE userid = ?", [userId]);
             profile = rec[0] || {};
         }
 

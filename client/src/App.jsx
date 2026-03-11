@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage'
 import AdminDashboard from './pages/AdminDashboard'
 import RecruiterDashboard from './pages/RecruiterDashboard'
 import CandidateDashboard from './pages/CandidateDashboard'
+import DesignSystemPage from './pages/DesignSystemPage'
 
 import './App.css'
 
@@ -30,6 +31,7 @@ function App() {
         <Router>
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/design-system" element={<DesignSystemPage />} />
             <Route path="/login" element={<LoginPage />} />
 
             <Route path="/admin" element={

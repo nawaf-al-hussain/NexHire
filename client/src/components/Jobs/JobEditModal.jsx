@@ -11,12 +11,16 @@ const JobEditModal = ({ job, isOpen, onClose, onSave }) => {
         minExperience: 0,
         vacancies: 1,
         isActive: true,
-        skills: []
+        skills: [],
+        minSalary: '',
+        maxSalary: '',
+        salaryTransparent: false
     });
     const [availableSkills, setAvailableSkills] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [showSalarySection, setShowSalarySection] = useState(false);
 
     // Fetch available skills when modal opens
     useEffect(() => {
@@ -24,6 +28,9 @@ const JobEditModal = ({ job, isOpen, onClose, onSave }) => {
             fetchSkills();
             if (job) {
                 fetchJobDetails();
+            } else {
+                // Reset form for new job
+                setShowSalarySection(false);
             }
         }
     }, [isOpen, job]);
@@ -60,8 +67,16 @@ const JobEditModal = ({ job, isOpen, onClose, onSave }) => {
                     name: s.SkillName,
                     isMandatory: s.IsMandatory,
                     minProficiency: s.MinProficiency
-                }))
+                })),
+                minSalary: jobData.minSalary || '',
+                maxSalary: jobData.maxSalary || '',
+                salaryTransparent: jobData.salaryTransparent || false
             });
+
+            // Show salary section if job has salary data
+            if (jobData.minSalary || jobData.maxSalary) {
+                setShowSalarySection(true);
+            }
         } catch (err) {
             console.error('Error fetching job details:', err);
             setError('Failed to load job details');
@@ -130,7 +145,10 @@ const JobEditModal = ({ job, isOpen, onClose, onSave }) => {
                     id: s.id,
                     isMandatory: s.isMandatory,
                     minProficiency: parseInt(s.minProficiency) || 1
-                }))
+                })),
+                minSalary: formData.minSalary ? parseInt(formData.minSalary) : null,
+                maxSalary: formData.maxSalary ? parseInt(formData.maxSalary) : null,
+                salaryTransparent: formData.salaryTransparent
             };
 
             await axios.put(`${API_BASE}/jobs/${job.JobID}`, payload, {
@@ -282,6 +300,78 @@ const JobEditModal = ({ job, isOpen, onClose, onSave }) => {
                                     <span className="text-sm font-black text-[var(--text-primary)]">Active Job</span>
                                 </label>
                             </div>
+                        </div>
+
+                        {/* Salary Range Section */}
+                        <div className="glass-card rounded-2xl p-6 border border-indigo-500/20">
+                            <button
+                                type="button"
+                                onClick={() => setShowSalarySection(!showSalarySection)}
+                                className="flex items-center justify-between w-full"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                        <span className="text-emerald-500 font-black text-sm">$</span>
+                                    </div>
+                                    <div className="text-left">
+                                        <h4 className="text-sm font-black text-[var(--text-primary)]">Salary Range</h4>
+                                        <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                                            {formData.minSalary || formData.maxSalary
+                                                ? `${formData.minSalary || '0'} - ${formData.maxSalary || '0'}`
+                                                : 'Set salary range for this job'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={showSalarySection}
+                                    onChange={() => setShowSalarySection(!showSalarySection)}
+                                    className="w-5 h-5 rounded-xl border-[var(--border-primary)] bg-[var(--bg-accent)] text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
+                                />
+                            </button>
+
+                            {showSalarySection && (
+                                <div className="mt-6 grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">
+                                            Min Salary ($)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="minSalary"
+                                            value={formData.minSalary}
+                                            onChange={handleChange}
+                                            placeholder="e.g., 50000"
+                                            className="w-full bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-indigo-500 transition-colors text-[var(--text-primary)]"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">
+                                            Max Salary ($)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="maxSalary"
+                                            value={formData.maxSalary}
+                                            onChange={handleChange}
+                                            placeholder="e.g., 80000"
+                                            className="w-full bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none focus:border-indigo-500 transition-colors text-[var(--text-primary)]"
+                                        />
+                                    </div>
+                                    <div className="col-span-2 flex items-center gap-3 pt-2">
+                                        <input
+                                            type="checkbox"
+                                            name="salaryTransparent"
+                                            checked={formData.salaryTransparent}
+                                            onChange={handleChange}
+                                            className="w-5 h-5 rounded-xl border-[var(--border-primary)] bg-[var(--bg-accent)] text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
+                                        />
+                                        <label className="text-sm font-black text-[var(--text-primary)]">
+                                            Make salary visible to candidates
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Skills */}

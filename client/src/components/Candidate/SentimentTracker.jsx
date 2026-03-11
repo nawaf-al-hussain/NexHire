@@ -419,95 +419,106 @@ const AddInteractionModal = ({ candidateId, onClose, onSuccess }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-            <div className="glass-card rounded-3xl p-8 w-full max-w-lg animate-in zoom-in">
-                <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-black text-[var(--text-primary)]">
-                        Add Interaction
-                    </h3>
-                    <button onClick={onClose} className="p-2 hover:bg-[var(--bg-accent)] rounded-xl">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 transition-opacity duration-300">
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={onClose}></div>
+
+            <div className="relative bg-[var(--bg-primary)] border border-[var(--border-primary)] w-full max-w-lg overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col text-[var(--text-primary)]">
+                {/* Header */}
+                <div className="p-8 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--bg-accent)]/20">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                            <MessageSquare className="text-purple-500" size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black tracking-tight">Add Interaction</h3>
+                            <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-1 italic">Record communication for sentiment analysis</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-[var(--bg-tertiary)] rounded-xl transition-all">
                         <X size={20} className="text-[var(--text-muted)]" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Interaction Type */}
-                    <div>
-                        <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">
-                            Interaction Type
-                        </label>
-                        <div className="grid grid-cols-4 gap-2">
-                            {[
-                                { type: 'email', icon: Mail, label: 'Email' },
-                                { type: 'interview', icon: Video, label: 'Interview' },
-                                { type: 'call', icon: Phone, label: 'Call' },
-                                { type: 'chat', icon: MessageSquare, label: 'Chat' }
-                            ].map(({ type, icon: Icon, label }) => (
-                                <button
-                                    key={type}
-                                    type="button"
-                                    onClick={() => setInteractionType(type)}
-                                    className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-colors ${interactionType === type
-                                        ? 'bg-[var(--accent)] text-white'
-                                        : 'bg-[var(--bg-accent)] text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]'
-                                        }`}
-                                >
-                                    <Icon size={18} />
-                                    <span className="text-[9px] font-bold uppercase">{label}</span>
-                                </button>
-                            ))}
+                <div className="p-8">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Interaction Type */}
+                        <div>
+                            <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3">
+                                Interaction Type
+                            </label>
+                            <div className="grid grid-cols-4 gap-3">
+                                {[
+                                    { type: 'email', icon: Mail, label: 'Email' },
+                                    { type: 'interview', icon: Video, label: 'Interview' },
+                                    { type: 'call', icon: Phone, label: 'Call' },
+                                    { type: 'chat', icon: MessageSquare, label: 'Chat' }
+                                ].map(({ type, icon: Icon, label }) => (
+                                    <button
+                                        key={type}
+                                        type="button"
+                                        onClick={() => setInteractionType(type)}
+                                        className={`p-4 rounded-2xl flex flex-col items-center gap-2 transition-colors ${interactionType === type
+                                            ? 'bg-purple-500 text-white'
+                                            : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] border border-[var(--border-primary)]'
+                                            }`}
+                                    >
+                                        <Icon size={20} />
+                                        <span className="text-[10px] font-bold uppercase">{label}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Content */}
-                    <div>
-                        <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">
-                            Interaction Content
-                        </label>
-                        <textarea
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            rows={5}
-                            placeholder="Paste the email, chat transcript, or notes from the interaction..."
-                            className="w-full px-4 py-3 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-xl text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                        />
-                    </div>
-
-                    {/* Error */}
-                    {error && (
-                        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
-                            <p className="text-sm text-rose-500">{error}</p>
+                        {/* Content */}
+                        <div>
+                            <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3">
+                                Interaction Content
+                            </label>
+                            <textarea
+                                value={content}
+                                onChange={(e) => setContent(e.target.value)}
+                                rows={5}
+                                placeholder="Paste the email, chat transcript, or notes from the interaction..."
+                                className="w-full px-4 py-4 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-2xl text-sm font-bold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500/50 transition-all"
+                            />
                         </div>
-                    )}
 
-                    {/* Actions */}
-                    <div className="flex justify-end gap-3 pt-4">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 bg-[var(--bg-accent)] text-[var(--text-primary)] rounded-xl text-sm font-bold"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-4 py-2 bg-[var(--accent)] text-white rounded-xl text-sm font-bold flex items-center gap-2 disabled:opacity-50"
-                        >
-                            {loading ? (
-                                <>
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                                    Analyzing...
-                                </>
-                            ) : (
-                                <>
-                                    <Send size={14} />
-                                    Analyze Sentiment
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </form>
+                        {/* Error */}
+                        {error && (
+                            <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
+                                <p className="text-sm text-rose-500 font-bold">{error}</p>
+                            </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 px-6 py-4 rounded-2xl border border-[var(--border-primary)] text-[var(--text-secondary)] font-black uppercase text-xs tracking-widest hover:bg-[var(--bg-accent)] transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="flex-1 px-6 py-4 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black uppercase text-xs tracking-widest hover:from-purple-600 hover:to-indigo-700 shadow-lg shadow-purple-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        Analyzing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send size={16} />
+                                        Analyze Sentiment
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );

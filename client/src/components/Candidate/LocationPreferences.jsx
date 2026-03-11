@@ -100,18 +100,11 @@ const LocationPreferences = () => {
     }
 
     return (
-        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="space-y-10">
             {/* Header */}
-            <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-cyan-500/5 to-blue-500/5 border border-cyan-500/20">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-500">
-                        <MapPin size={28} />
-                    </div>
-                    <div>
-                        <h2 className="text-xl font-black uppercase tracking-tight">Location Preferences</h2>
-                        <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Set your work location preferences</p>
-                    </div>
-                </div>
+            <div className="flex items-center gap-3 mb-6">
+                <MapPin className="w-5 h-5 text-cyan-500" />
+                <h2 className="text-lg font-black uppercase tracking-tighter">Location Preferences</h2>
             </div>
 
             {/* Work Type Selection */}

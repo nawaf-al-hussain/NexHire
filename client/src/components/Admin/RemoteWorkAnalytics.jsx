@@ -91,7 +91,20 @@ const RemoteWorkAnalytics = ({ data, loading }) => {
     }
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+            {/* Gradient Header */}
+            <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 border border-blue-500/20">
+                <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                        <Globe size={28} />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-black uppercase tracking-tight">Remote Work Analytics</h2>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Remote work compatibility and timezone insights</p>
+                    </div>
+                </div>
+            </div>
+
             {/* Summary Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="glass-card rounded-2xl p-6 border border-blue-500/20">

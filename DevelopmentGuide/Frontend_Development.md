@@ -35,7 +35,7 @@ Each dashboard uses an `activeTab` state and a navigation array:
 | Component | File | Purpose |
 |---|---|---|
 | `DashboardShell` | `components/DashboardShell.jsx` | Shared layout (sidebar, header, theme) |
-| `JobList` | `components/Jobs/JobList.jsx` | Recruiter's job posting grid |
+| `JobList` | `components/Jobs/JobList.jsx` | Recruiter's job posting grid with gradient header, Post Job button, search bar with Auto Rejection & Screening Bot icon buttons, Archives button
 | `JobCard` | `components/Jobs/JobCard.jsx` | Individual job card display |
 | `JobModal` | `components/Jobs/JobModal.jsx` | Job detail modal |
 | `JobEditModal` | `components/Jobs/JobEditModal.jsx` | Edit job posting modal |
@@ -54,7 +54,7 @@ Each dashboard uses an `activeTab` state and a navigation array:
 | `Leaderboard` | `components/Candidate/Leaderboard.jsx` | Gamification & achievements (includes global rankings) |
 | `InterviewPrep` | `components/Candidate/InterviewPrep.jsx` | Interview preparation materials |
 | `SalaryCoach` | `components/Candidate/SalaryCoach.jsx` | Salary negotiation coaching |
-| `ResumeScore` | `components/Candidate/ResumeScore.jsx` | Resume quality analysis |
+| `ResumeScore` | `components/Candidate/ResumeScore.jsx` | Resume quality analysis - shows empty state "No Resume Data Available" when no resume uploaded |
 | `LocationPreferences` | `components/Candidate/LocationPreferences.jsx` | Location & remote work preferences |
 | `ProfileManagement` | `components/Candidate/ProfileManagement.jsx` | Candidate profile management with privacy & consent settings |
 | `PushNotifications` | `components/Candidate/PushNotifications.jsx` | Push notification management |
@@ -63,7 +63,7 @@ Each dashboard uses an `activeTab` state and a navigation array:
 | `AdvancedAnalytics` | `components/Recruiters/AdvancedAnalytics.jsx` | Advanced analytics dashboard |
 | `BiasAnalytics` | `components/Recruiters/BiasAnalytics.jsx` | Bias detection analytics |
 | `HireAnalytics` | `components/Recruiters/HireAnalytics.jsx` | Hiring metrics & analytics |
-| `TalentPool` | `components/Recruiters/TalentPool.jsx` | Candidate talent pool with fuzzy search |
+| `TalentPool` | `components/Recruiters/TalentPool.jsx` | Candidate talent pool with fuzzy search - shows YearsOfExperience and ResumeScore from ResumeInsights table (shows N/A when no data) |
 | `SkillVerificationStatus` | `components/Recruiters/SkillVerificationStatus.jsx` | Skill verification management |
 | `ScreeningBot` | `components/Recruiters/ScreeningBot.jsx` | Automated screening bot with run, decisions, override, advance, reject actions |
 | `VideoInterviews` | `components/Recruiters/VideoInterviews.jsx` | Video interview management with feedback & transcription |
@@ -93,6 +93,7 @@ Each dashboard uses an `activeTab` state and a navigation array:
 | `InterviewQuestionsGenerator` | `components/Recruiters/InterviewQuestionsGenerator.jsx` | AI interview question generator with skill-based questions and difficulty levels |
 | `InterviewFatigueReducer` | `components/Recruiters/InterviewFatigueReducer.jsx` | Interview round optimizer to reduce redundancy and candidate fatigue |
 | `RejectionReasonModal` | `components/Jobs/RejectionReasonModal.jsx` | Modal for providing rejection reasons to candidates |
+| `SQLViews` | `components/Admin/SQLViews.jsx` | SQL database view explorer with data query and CSV export |
 
 ### Context Providers
 | Component | File | Purpose |

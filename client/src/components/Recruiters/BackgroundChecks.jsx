@@ -15,7 +15,8 @@ import {
     Filter,
     Download,
     Eye,
-    Loader2
+    Loader2,
+    X
 } from 'lucide-react';
 
 const BackgroundChecks = () => {
@@ -202,27 +203,27 @@ const BackgroundChecks = () => {
 
     if (loading && !dashboardData) {
         return (
-            <div className="flex flex-col items-center justify-center py-20">
-                <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-                <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
-                    Loading Background Checks...
-                </p>
+            <div className="flex items-center justify-center py-20">
+                <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
+                <span className="ml-3 text-sm font-black uppercase tracking-widest text-[var(--text-muted)]">Loading Background Checks...</span>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <Shield className="w-5 h-5 text-blue-500" />
-                    <div>
-                        <h2 className="text-lg font-black uppercase tracking-tighter">Background Checks</h2>
-                        <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Manage candidate background verification</p>
+            <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 border border-blue-500/20">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                            <Shield size={28} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black uppercase tracking-tight">Background Checks</h2>
+                            <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Manage candidate background verification</p>
+                        </div>
                     </div>
-                </div>
-                <div className="flex gap-2">
                     <button
                         onClick={() => setShowInitiateModal(true)}
                         className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-500 transition-all flex items-center gap-2"
@@ -282,14 +283,14 @@ const BackgroundChecks = () => {
                     </div>
 
                     {/* Stats by Type */}
-                    <div className="glass-card rounded-[2.5rem] p-8">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Shield className="w-5 h-5 text-indigo-500" />
-                            <h3 className="text-sm font-black uppercase tracking-widest">Checks by Type</h3>
+                    <div className="glass-card rounded-[3rem] p-10">
+                        <div className="flex items-center gap-3 mb-8">
+                            <Shield className="w-5 h-5 text-blue-500" />
+                            <h3 className="text-lg font-black uppercase tracking-tight">Checks by Type</h3>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                             {dashboardData.byType?.map((type) => (
-                                <div key={type.CheckType} className="text-center p-4 bg-[var(--bg-secondary)] rounded-xl">
+                                <div key={type.CheckType} className="text-center p-4 bg-[var(--bg-secondary)] rounded-xl hover:bg-blue-500/5 transition-colors">
                                     <p className="text-2xl font-bold text-[var(--text-primary)]">{type.Count}</p>
                                     <p className="text-xs text-[var(--text-muted)] uppercase">{type.CheckType}</p>
                                     <p className="text-xs text-green-400">{type.Completed} completed</p>
@@ -299,10 +300,12 @@ const BackgroundChecks = () => {
                     </div>
 
                     {/* Recent Checks Table */}
-                    <div className="glass-card rounded-[2.5rem] p-8">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Shield className="w-5 h-5 text-indigo-500" />
-                            <h3 className="text-sm font-black uppercase tracking-widest">Recent Checks</h3>
+                    <div className="glass-card rounded-[3rem] p-10">
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-3">
+                                <Shield className="w-5 h-5 text-blue-500" />
+                                <h3 className="text-lg font-black uppercase tracking-tight">Recent Checks</h3>
+                            </div>
                             <div className="flex gap-2">
                                 <div className="relative">
                                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
@@ -352,8 +355,8 @@ const BackgroundChecks = () => {
                                                 <td className="py-4 pr-4">
                                                     {check.Result ? (
                                                         <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${check.Result === 'Clear' ? 'bg-emerald-500/10 text-emerald-500' :
-                                                                check.Result === 'Adverse' ? 'bg-rose-500/10 text-rose-500' :
-                                                                    'bg-amber-500/10 text-amber-500'
+                                                            check.Result === 'Adverse' ? 'bg-rose-500/10 text-rose-500' :
+                                                                'bg-amber-500/10 text-amber-500'
                                                             }`}>
                                                             {check.Result}
                                                         </span>
@@ -500,19 +503,36 @@ const BackgroundChecks = () => {
 
             {/* Initiate Modal */}
             {showInitiateModal && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-                    <div className="glass-card rounded-[3rem] p-8 w-full max-w-md">
-                        <h3 className="text-xl font-bold text-[var(--text-primary)] mb-6">Initiate Background Check</h3>
-                        <form onSubmit={initiateCheck} className="space-y-4">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-300">
+                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setShowInitiateModal(false)}></div>
+
+                    <div className="relative bg-[var(--bg-primary)] border border-[var(--border-primary)] w-full max-w-md max-h-[90vh] overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col text-[var(--text-primary)]">
+                        {/* Header */}
+                        <div className="p-8 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--bg-accent)]/20">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                                    <Shield className="text-blue-500" size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black tracking-tight">Initiate Background Check</h2>
+                                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-1 italic">Select candidate and check type</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowInitiateModal(false)} className="w-10 h-10 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-primary)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-500 transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={initiateCheck} className="flex-1 overflow-y-auto p-10 space-y-8">
                             <div>
-                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">
+                                <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-1 mb-2">
                                     Candidate
                                 </label>
                                 <select
                                     value={newCheck.candidateId}
                                     onChange={(e) => setNewCheck({ ...newCheck, candidateId: e.target.value })}
                                     required
-                                    className="w-full px-4 py-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-[var(--text-primary)]"
+                                    className="w-full bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl py-4 px-6 text-sm text-[var(--text-primary)] outline-none transition-all font-bold"
                                 >
                                     <option value="">Select candidate...</option>
                                     {candidates.map(c => (
@@ -522,13 +542,13 @@ const BackgroundChecks = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">
+                                <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-1 mb-2">
                                     Check Type
                                 </label>
                                 <select
                                     value={newCheck.checkType}
                                     onChange={(e) => setNewCheck({ ...newCheck, checkType: e.target.value })}
-                                    className="w-full px-4 py-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-[var(--text-primary)]"
+                                    className="w-full bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl py-4 px-6 text-sm text-[var(--text-primary)] outline-none transition-all font-bold"
                                 >
                                     {checkTypes.map(t => (
                                         <option key={t} value={t}>{t}</option>
@@ -537,7 +557,7 @@ const BackgroundChecks = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">
+                                <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-1 mb-2">
                                     Vendor (optional)
                                 </label>
                                 <input
@@ -545,19 +565,19 @@ const BackgroundChecks = () => {
                                     value={newCheck.vendor}
                                     onChange={(e) => setNewCheck({ ...newCheck, vendor: e.target.value })}
                                     placeholder="e.g., Checkr, HireRight, Internal"
-                                    className="w-full px-4 py-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-[var(--text-primary)]"
+                                    className="w-full bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl py-4 px-6 text-sm text-[var(--text-primary)] outline-none transition-all placeholder:text-[var(--text-muted)] font-bold"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">
+                                <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-1 mb-2">
                                     Notes
                                 </label>
                                 <textarea
                                     value={newCheck.notes}
                                     onChange={(e) => setNewCheck({ ...newCheck, notes: e.target.value })}
                                     rows={3}
-                                    className="w-full px-4 py-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-[var(--text-primary)]"
+                                    className="w-full bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl py-4 px-6 text-sm text-[var(--text-primary)] outline-none transition-all placeholder:text-[var(--text-muted)] font-bold"
                                 />
                             </div>
 
@@ -565,14 +585,14 @@ const BackgroundChecks = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowInitiateModal(false)}
-                                    className="flex-1 px-4 py-3 border border-[var(--border-color)] text-[var(--text-secondary)] rounded-xl hover:bg-[var(--bg-secondary)]"
+                                    className="flex-1 px-4 py-4 border border-[var(--border-primary)] text-[var(--text-secondary)] rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[var(--bg-accent)] transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl disabled:opacity-50"
+                                    className="flex-1 px-4 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest disabled:opacity-50 transition-colors"
                                 >
                                     {loading ? 'Initiating...' : 'Initiate Check'}
                                 </button>
@@ -584,58 +604,72 @@ const BackgroundChecks = () => {
 
             {/* Details Modal */}
             {showDetailsModal && selectedCheck && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-                    <div className="glass-card rounded-[3rem] p-8 w-full max-w-lg">
-                        <h3 className="text-xl font-bold text-[var(--text-primary)] mb-6">
-                            {selectedCheck.CheckType} Check Details
-                        </h3>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-300">
+                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setShowDetailsModal(false)}></div>
 
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Status</p>
-                                    <p className={getStatusColor(selectedCheck.Status)}>{selectedCheck.Status}</p>
+                    <div className="relative bg-[var(--bg-primary)] border border-[var(--border-primary)] w-full max-w-lg max-h-[90vh] overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col text-[var(--text-primary)]">
+                        {/* Header */}
+                        <div className="p-8 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--bg-accent)]/20">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                                    <Shield className="text-blue-500" size={24} />
                                 </div>
                                 <div>
-                                    <p className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Result</p>
-                                    <p className={selectedCheck.Result === 'Clear' ? 'text-green-400' : selectedCheck.Result === 'Adverse' ? 'text-red-400' : 'text-yellow-400'}>
+                                    <h2 className="text-xl font-black tracking-tight">{selectedCheck.CheckType} Check Details</h2>
+                                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-1 italic">View verification results</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowDetailsModal(false)} className="w-10 h-10 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-primary)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-500 transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-10 space-y-8">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Status</p>
+                                    <p className={`font-bold mt-1 ${selectedCheck.Status === 'Cleared' ? 'text-emerald-500' : selectedCheck.Status === 'InProgress' ? 'text-amber-500' : selectedCheck.Status === 'Failed' || selectedCheck.Status === 'Adverse' ? 'text-rose-500' : 'text-blue-500'}`}>{selectedCheck.Status}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Result</p>
+                                    <p className={`font-bold mt-1 ${selectedCheck.Result === 'Clear' ? 'text-emerald-400' : selectedCheck.Result === 'Adverse' ? 'text-red-400' : 'text-yellow-400'}`}>
                                         {selectedCheck.Result || 'Pending'}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Vendor</p>
-                                    <p className="text-[var(--text-primary)]">{selectedCheck.Vendor}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Vendor</p>
+                                    <p className="text-[var(--text-primary)] font-bold mt-1">{selectedCheck.Vendor}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Request ID</p>
-                                    <p className="text-[var(--text-primary)] font-mono text-sm">{selectedCheck.RequestID}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Request ID</p>
+                                    <p className="text-[var(--text-primary)] font-mono text-sm font-bold mt-1">{selectedCheck.RequestID}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Initiated</p>
-                                    <p className="text-[var(--text-primary)]">{selectedCheck.InitiatedAt ? new Date(selectedCheck.InitiatedAt).toLocaleString() : '—'}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Initiated</p>
+                                    <p className="text-[var(--text-primary)] font-bold mt-1">{selectedCheck.InitiatedAt ? new Date(selectedCheck.InitiatedAt).toLocaleString() : '—'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Completed</p>
-                                    <p className="text-[var(--text-primary)]">{selectedCheck.CompletedAt ? new Date(selectedCheck.CompletedAt).toLocaleString() : '—'}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Completed</p>
+                                    <p className="text-[var(--text-primary)] font-bold mt-1">{selectedCheck.CompletedAt ? new Date(selectedCheck.CompletedAt).toLocaleString() : '—'}</p>
                                 </div>
                                 {selectedCheck.Cost && (
                                     <div>
-                                        <p className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Cost</p>
-                                        <p className="text-[var(--text-primary)]">${selectedCheck.Cost}</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Cost</p>
+                                        <p className="text-[var(--text-primary)] font-bold mt-1">${selectedCheck.Cost}</p>
                                     </div>
                                 )}
                                 {selectedCheck.TurnaroundDays && (
                                     <div>
-                                        <p className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Turnaround</p>
-                                        <p className="text-[var(--text-primary)]">{selectedCheck.TurnaroundDays} days</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Turnaround</p>
+                                        <p className="text-[var(--text-primary)] font-bold mt-1">{selectedCheck.TurnaroundDays} days</p>
                                     </div>
                                 )}
                             </div>
 
                             {selectedCheck.Findings && (
                                 <div>
-                                    <p className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">Findings</p>
-                                    <p className="text-sm text-[var(--text-secondary)] bg-[var(--bg-secondary)] p-3 rounded-lg">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">Findings</p>
+                                    <p className="text-sm text-[var(--text-secondary)] bg-[var(--bg-accent)] p-4 rounded-2xl font-bold">
                                         {selectedCheck.Findings}
                                     </p>
                                 </div>
@@ -643,23 +677,23 @@ const BackgroundChecks = () => {
 
                             {selectedCheck.Notes && (
                                 <div>
-                                    <p className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">Notes</p>
-                                    <p className="text-sm text-[var(--text-secondary)] bg-[var(--bg-secondary)] p-3 rounded-lg">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">Notes</p>
+                                    <p className="text-sm text-[var(--text-secondary)] bg-[var(--bg-accent)] p-4 rounded-2xl font-bold">
                                         {selectedCheck.Notes}
                                     </p>
                                 </div>
                             )}
 
                             {/* Update Status Form */}
-                            <div className="border-t border-[var(--border-color)] pt-4 mt-4">
-                                <p className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-3">Update Status</p>
+                            <div className="border-t border-[var(--border-primary)] pt-6">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3">Update Status</p>
                                 <div className="flex gap-2 flex-wrap">
                                     {['InProgress', 'Completed'].map(status => (
                                         <button
                                             key={status}
                                             onClick={() => updateCheckStatus(selectedCheck.CheckID, { status })}
                                             disabled={selectedCheck.Status === status}
-                                            className="px-3 py-1.5 text-sm bg-[var(--bg-secondary)] hover:bg-blue-600 hover:text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            className="px-4 py-2 text-sm bg-[var(--bg-accent)] hover:bg-blue-600 hover:text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
                                             {status}
                                         </button>
@@ -669,14 +703,14 @@ const BackgroundChecks = () => {
                                             key={result}
                                             onClick={() => updateCheckStatus(selectedCheck.CheckID, { status: 'Completed', result })}
                                             disabled={selectedCheck.Result === result}
-                                            className="px-3 py-1.5 text-sm bg-green-900/30 text-green-400 hover:bg-green-600 hover:text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            className="px-4 py-2 text-sm bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
                                             {result}
                                         </button>
                                     ))}
                                     <button
                                         onClick={() => updateCheckStatus(selectedCheck.CheckID, { status: 'Adverse', result: 'Adverse' })}
-                                        className="px-3 py-1.5 text-sm bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white rounded-lg transition-colors"
+                                        className="px-4 py-2 text-sm bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-600 hover:text-white rounded-xl font-bold transition-colors"
                                     >
                                         Adverse
                                     </button>
@@ -684,12 +718,14 @@ const BackgroundChecks = () => {
                             </div>
                         </div>
 
-                        <button
-                            onClick={() => setShowDetailsModal(false)}
-                            className="w-full mt-6 px-4 py-3 border border-[var(--border-color)] text-[var(--text-secondary)] rounded-xl hover:bg-[var(--bg-secondary)]"
-                        >
-                            Close
-                        </button>
+                        <div className="p-6 border-t border-[var(--border-primary)]">
+                            <button
+                                onClick={() => setShowDetailsModal(false)}
+                                className="w-full px-4 py-4 border border-[var(--border-primary)] text-[var(--text-secondary)] rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[var(--bg-accent)] transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -44,7 +44,7 @@ const RecruiterPerformanceAdmin = () => {
     }
 
     return (
-        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Header */}
             <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 border border-indigo-500/20">
                 <div className="flex items-center gap-4">

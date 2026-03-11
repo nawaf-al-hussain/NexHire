@@ -186,10 +186,15 @@ const getStatusColor = (status) => {
 ### 2.6 Button Patterns
 
 ```jsx
-{/* Primary Action Button */}
+{/* Primary Action Button - Use indigo-600 */}
 <button className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 transition-all disabled:opacity-50 flex items-center gap-2">
   <IconComponent size={16} />
   Button Label
+</button>
+
+{/* Active Tab - Use indigo-600 */}
+<button className="px-6 py-3 text-sm font-bold rounded-xl bg-indigo-600 text-white">
+  Active Tab
 </button>
 
 {/* Secondary Button */}
@@ -374,6 +379,7 @@ className="animate-pulse"
 - Use uppercase + tracking-widest for labels
 - Include loading states for async content
 - Provide empty states with helpful guidance
+- **Use `indigo-600` for active tabs and buttons (not indigo-500)**
 
 ### Don'ts
 - Don't use hardcoded colors (e.g., `#6366f1`) - use Tailwind classes
@@ -381,3 +387,436 @@ className="animate-pulse"
 - Don't skip the icon in card headers
 - Don't use `font-normal` for important text
 - Don't forget hover states on interactive elements
+
+---
+
+## 7. Dashboard Layout & Shell
+
+### 7.1 Main Layout Structure
+
+```jsx
+{/* Dashboard Shell */}
+<div className="flex h-screen overflow-hidden bg-[var(--bg-primary)]">
+  {/* Sidebar */}
+  <aside className="w-80 h-screen bg-[var(--sidebar-bg)] border-r border-[var(--border-primary)] p-8 flex flex-col">
+    {/* Logo */}
+    <div className="flex items-center gap-4 mb-12">
+      <div className="w-10 h-10 rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-600/20">
+        <img src={logo} className="w-full h-full object-contain" />
+      </div>
+      <span className="font-black text-2xl tracking-tighter uppercase">NexHire</span>
+    </div>
+    
+    {/* Navigation */}
+    <nav className="space-y-2 flex-1">
+      {navigation.map(item => (
+        <button className={`flex items-center justify-between w-full p-4 rounded-2xl ${item.active ? 'bg-indigo-500/10 text-indigo-500' : 'hover:bg-[var(--bg-accent)]'}`}>
+          <div className="flex items-center gap-4">
+            <item.icon className="w-5 h-5" />
+            <span className="text-sm">{item.label}</span>
+          </div>
+          {item.badge && <span className="px-2 py-0.5 bg-indigo-500 text-white text-[10px] font-black rounded-full">{item.badge}</span>}
+        </button>
+      ))}
+    </nav>
+    
+    {/* User Profile */}
+    <div className="p-6 rounded-3xl border border-[var(--border-primary)] bg-[var(--bg-accent)]">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-[var(--bg-primary)] border flex items-center justify-center">
+          <User size={20} className="text-indigo-500" />
+        </div>
+        <div>
+          <div className="text-xs font-black">{user.Username}</div>
+          <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{user.Role}</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  
+  {/* Main Content */}
+  <main className="flex-1 flex flex-col">
+    {/* Header */}
+    <header className="h-24 border-b border-[var(--border-primary)] flex items-center justify-between px-12 bg-[var(--header-bg)] backdrop-blur-md sticky top-0 z-40">
+      <div>
+        <div className="text-indigo-500 font-bold text-[10px] uppercase tracking-[.4em]">{subtitle}</div>
+        <h1 className="text-xl font-black tracking-tight">{title}</h1>
+      </div>
+      <div className="flex items-center gap-6">
+        {/* Theme Toggle */}
+        <button className="w-10 h-10 rounded-xl bg-[var(--bg-accent)] border border-[var(--border-primary)] flex items-center justify-center">
+          <Sun size={18} />
+        </button>
+        {/* Notifications */}
+        <button className="relative w-10 h-10 rounded-xl bg-[var(--bg-accent)] border border-[var(--border-primary)] flex items-center justify-center">
+          <Bell size={18} />
+          <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-indigo-500 rounded-full"></span>
+        </button>
+      </div>
+    </header>
+    
+    {/* Page Content */}
+    <div className="p-12 overflow-y-auto">
+      {children}
+    </div>
+  </main>
+</div>
+```
+
+### 7.2 Sidebar Navigation Patterns
+
+| Pattern | Class | Description |
+|---------|-------|-------------|
+| Active Item | `bg-indigo-500/10 text-indigo-500 font-bold` | Current page highlight |
+| Hover State | `hover:bg-[var(--bg-accent)] hover:text-[var(--text-primary)]` | Mouse over state |
+| Nav Label | `text-sm tracking-tight` | Navigation item text |
+| Nav Icon | `w-5 h-5` | Icon size in navigation |
+| Badge | `px-2 py-0.5 bg-indigo-500 text-white text-[10px] font-black rounded-full` | Notification badge |
+
+### 7.3 Header Patterns
+
+| Element | Class | Description |
+|---------|-------|-------------|
+| Header Height | `h-24` | Standard header height |
+| Subtitle | `text-indigo-500 font-bold text-[10px] uppercase tracking-[.4em]` | Page section label |
+| Title | `text-xl font-black tracking-tight` | Page main title |
+| Header BG | `bg-[var(--header-bg)] backdrop-blur-md` | Sticky header with blur |
+
+---
+
+## 8. Charts & Data Visualization
+
+### 8.1 Chart Container
+
+```jsx
+{/* Chart Wrapper */}
+<div className="h-[350px] w-full mt-4">
+  <ResponsiveContainer width="100%" height="100%">
+    <PieChart>
+      {/* Chart Content */}
+    </PieChart>
+  </ResponsiveContainer>
+</div>
+```
+
+### 8.2 Tooltip Styling
+
+```jsx
+<Tooltip
+  contentStyle={{
+    backgroundColor: 'var(--bg-secondary)',
+    border: '1px solid var(--border-primary)',
+    borderRadius: '1rem',
+    fontSize: '11px',
+    fontWeight: 'bold'
+  }}
+/>
+```
+
+### 8.3 Chart Color Palette
+
+```js
+const CHART_COLORS = [
+  '#10b981', // Emerald
+  '#6366f1', // Indigo
+  '#f59e0b', // Amber
+  '#ec4899', // Pink
+  '#8b5cf6', // Purple
+  '#06b6d4', // Cyan
+];
+```
+
+### 8.4 Legend Styling
+
+```jsx
+<Legend
+  layout="vertical"
+  align="right"
+  verticalAlign="middle"
+  wrapperStyle={{
+    fontSize: '10px',
+    fontWeight: 'bold',
+    textTransform: 'uppercase'
+  }}
+/>
+```
+
+---
+
+## 9. Modal Patterns
+
+### 9.1 Standard Modal
+
+```jsx
+{/* Modal Overlay */}
+<div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
+  {/* Modal Content */}
+  <div className="bg-[var(--bg-secondary)] rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] overflow-hidden border border-[var(--border-primary)] animate-in zoom-in-95 duration-300">
+    {/* Header */}
+    <div className="p-8 border-b border-[var(--border-primary)] flex items-center justify-between">
+      <h2 className="text-xl font-black">{title}</h2>
+      <button onClick={onClose} className="p-3 rounded-xl bg-[var(--bg-accent)] hover:bg-rose-500/10 hover:text-rose-500">
+        <X size={20} />
+      </button>
+    </div>
+    {/* Body */}
+    <div className="p-8 overflow-y-auto max-h-[calc(90vh-200px)]">
+      {children}
+    </div>
+  </div>
+</div>
+```
+
+### 9.2 Modal Z-Index Levels
+
+| Context | Z-Index | Class |
+|---------|---------|-------|
+| Sidebar | 50 | `z-50` |
+| Header | 40 | `z-40` |
+| Modal | 110 | `z-[110]` |
+| Dropdown | 50 | `z-50` |
+| Tooltip | 60 | `z-60` |
+
+### 9.3 Modal Animations
+
+| Animation | Class |
+|-----------|-------|
+| Entry | `animate-in zoom-in-95 duration-300` |
+| Exit | `animate-out fade-out duration-200` |
+
+---
+
+## 10. Form Patterns
+
+### 10.1 Complex Form with Skills
+
+```jsx
+{/* Skill Selector */}
+<div className="space-y-4">
+  <div className="flex gap-2">
+    <input
+      type="text"
+      placeholder="Search skills..."
+      className="flex-1 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl px-6 py-4 text-sm font-bold"
+    />
+    <button className="px-6 py-4 bg-indigo-600 text-white rounded-2xl font-black">
+      <Search size={18} />
+    </button>
+  </div>
+  
+  {/* Selected Skills Tags */}
+  <div className="flex flex-wrap gap-2">
+    {selectedSkills.map(skill => (
+      <span key={skill.id} className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-sm font-bold text-indigo-500 flex items-center gap-2">
+        {skill.name}
+        <button onClick={() => removeSkill(skill.id)}><X size={14} /></button>
+      </span>
+    ))}
+  </div>
+</div>
+```
+
+### 10.2 Toggle Switch
+
+```jsx
+{/* Toggle */}
+<button
+  onClick={() => setValue(!value)}
+  className={`w-12 h-6 rounded-full transition-colors ${value ? 'bg-indigo-500' : 'bg-[var(--bg-accent)]'}`}
+>
+  <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
+</button>
+```
+
+### 10.3 Range Slider
+
+```jsx
+<input
+  type="range"
+  min="0"
+  max="10"
+  value={value}
+  onChange={(e) => setValue(e.target.value)}
+  className="w-full h-2 bg-[var(--bg-accent)] rounded-lg appearance-none cursor-pointer accent-indigo-500"
+/>
+```
+
+---
+
+## 11. Navigation Components
+
+### 11.1 Tabs
+
+```jsx
+{/* Tab Navigation */}
+<div className="flex gap-2 border-b border-[var(--border-primary)]">
+  {tabs.map(tab => (
+    <button
+      key={tab.id}
+      onClick={() => setActiveTab(tab.id)}
+      className={`px-6 py-3 text-sm font-bold rounded-t-xl transition-all ${
+        activeTab === tab.id
+          ? 'bg-indigo-500 text-white'
+          : 'bg-[var(--bg-accent)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+      }`}
+    >
+      {tab.label}
+    </button>
+  ))}
+</div>
+```
+
+### 11.2 Breadcrumbs
+
+```jsx
+{/* Breadcrumb */}
+<div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+  <a href="/" className="hover:text-indigo-500">Home</a>
+  <ChevronRight size={14} />
+  <a href="/jobs" className="hover:text-indigo-500">Jobs</a>
+  <ChevronRight size={14} />
+  <span className="text-[var(--text-primary)]">Job Details</span>
+</div>
+```
+
+### 11.3 Pagination
+
+```jsx
+{/* Pagination */}
+<div className="flex items-center justify-between p-4">
+  <button className="px-4 py-2 bg-[var(--bg-accent)] rounded-xl text-sm font-bold">Previous</button>
+  <div className="flex gap-2">
+    {[1, 2, 3, 4, 5].map(page => (
+      <button key={page} className={`w-10 h-10 rounded-xl font-bold ${page === current ? 'bg-indigo-500 text-white' : 'bg-[var(--bg-accent)]'}`}>
+        {page}
+      </button>
+    ))}
+  </div>
+  <button className="px-4 py-2 bg-[var(--bg-accent)] rounded-xl text-sm font-bold">Next</button>
+</div>
+```
+
+---
+
+## 12. User Interface Elements
+
+### 12.1 Avatar
+
+```jsx
+{/* User Avatar */}
+<div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+  <User size={20} />
+</div>
+
+{/* Avatar with Image */}
+<div className="w-12 h-12 rounded-2xl overflow-hidden bg-[var(--bg-accent)]">
+  <img src={avatarUrl} className="w-full h-full object-cover" />
+</div>
+```
+
+### 12.2 Progress Bar
+
+```jsx
+{/* Progress Bar */}
+<div className="h-2 bg-[var(--bg-accent)] rounded-full overflow-hidden">
+  <div className="h-full bg-indigo-500 rounded-full transition-all duration-300" style={{ width: '75%' }} />
+</div>
+```
+
+### 12.3 Skeleton Loading
+
+```jsx
+{/* Card Skeleton */}
+<div className="glass-card rounded-[2.5rem] p-8 animate-pulse">
+  <div className="h-4 bg-[var(--bg-accent)] rounded w-3/4 mb-4"></div>
+  <div className="h-4 bg-[var(--bg-accent)] rounded w-1/2"></div>
+</div>
+```
+
+### 12.4 Notification Badge
+
+```jsx
+{/* Badge on Icon */}
+<div className="relative">
+  <Bell size={20} />
+  <span className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-500 rounded-full border-2 border-[var(--bg-primary)]"></span>
+</div>
+
+{/* Count Badge */}
+<span className="px-2 py-0.5 bg-indigo-500 text-white text-[10px] font-black rounded-full">
+  5
+</span>
+```
+
+---
+
+## 13. Responsive Breakpoints
+
+| Breakpoint | Width | Usage |
+|------------|-------|-------|
+| Mobile | < 640px | `sm:` prefix |
+| Tablet | 640px - 1024px | `md:` prefix |
+| Desktop | > 1024px | `lg:` prefix |
+| Large | > 1280px | `xl:` prefix |
+
+### Common Responsive Patterns
+
+```jsx
+{/* Sidebar hidden on mobile, visible on lg */}
+<aside className="fixed lg:static inset-y-0 -translate-x-full lg:translate-x-0">
+
+{/* Responsive grid */}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+{/* Responsive text */}
+<h1 className="text-xl lg:text-2xl font-black">
+```
+
+---
+
+## 14. Utility Classes Reference
+
+### 14.1 Scrollbar Styling
+
+```css
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--bg-accent);
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 3px;
+}
+```
+
+### 14.2 Text Truncation
+
+```jsx
+{/* Single line truncate */}
+<p className="truncate">Long text...</p>
+
+{/* Multi-line clamp */}
+<p className="line-clamp-2">Long text...</p>
+```
+
+### 14.3 Focus States
+
+```jsx
+{/* Focus ring */}
+<button className="focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]">
+
+{/* Focus visible only */}
+<button className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+```
+
+### 14.4 Selection Color
+
+```jsx
+{/* Custom text selection */}
+<div className="selection:bg-indigo-500/30">
+  Selectable text
+</div>
+```

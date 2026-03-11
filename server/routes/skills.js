@@ -10,7 +10,7 @@ const { protect } = require('../middleware/rbac');
  */
 router.get('/', protect, async (req, res) => {
     try {
-        const skills = await query("SELECT * FROM Skills ORDER BY SkillName ASC");
+        const skills = await query("SELECT * FROM skills ORDER BY skillname ASC");
         res.json(skills);
     } catch (err) {
         console.error("Fetch Skills Error:", err.message);

@@ -3,7 +3,7 @@ import {
     X, MapPin, Briefcase, Mail, Calendar, FileText, Award, Zap, Star, TrendingUp,
     Shield, Globe, Wifi, Home, Building, Target, Clock, CheckCircle, XCircle,
     AlertTriangle, ChevronRight, ExternalLink, Link2, Brain, Users, MessageSquare,
-    Heart, User
+    Heart, User, Download, File, FilePlus, Smile, Meh, Frown
 } from 'lucide-react';
 import axios from 'axios';
 import API_BASE from '../../apiConfig';
@@ -15,12 +15,24 @@ const CandidateProfileModal = ({ isOpen, onClose, candidateId, candidateName }) 
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
     const [activeTab, setActiveTab] = React.useState('overview');
+    const [documents, setDocuments] = React.useState([]);
+    const [resumeSentiment, setResumeSentiment] = React.useState(null);
+    const [documentsLoading, setDocumentsLoading] = React.useState(false);
+    const [sentimentLoading, setSentimentLoading] = React.useState(false);
 
     React.useEffect(() => {
         if (isOpen && candidateId) {
             fetchProfile();
         }
     }, [isOpen, candidateId]);
+
+    // Fetch documents and sentiment when Documents tab is active
+    React.useEffect(() => {
+        if (activeTab === 'documents' && candidateId) {
+            fetchDocuments();
+            fetchResumeSentiment();
+        }
+    }, [activeTab, candidateId]);
 
     const fetchProfile = async () => {
         setLoading(true);
@@ -33,6 +45,51 @@ const CandidateProfileModal = ({ isOpen, onClose, candidateId, candidateName }) 
             setError(err.response?.data?.error || "Failed to load candidate profile");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchDocuments = async () => {
+        setDocumentsLoading(true);
+        try {
+            const res = await axios.get(`${API_BASE}/candidates/${candidateId}/documents`);
+            setDocuments(res.data);
+        } catch (err) {
+            console.error("Documents fetch error:", err);
+            setDocuments([]);
+        } finally {
+            setDocumentsLoading(false);
+        }
+    };
+
+    const fetchResumeSentiment = async () => {
+        setSentimentLoading(true);
+        try {
+            const res = await axios.get(`${API_BASE}/candidates/${candidateId}/documents/resume/sentiment`);
+            setResumeSentiment(res.data);
+        } catch (err) {
+            console.error("Sentiment fetch error:", err);
+            setResumeSentiment(null);
+        } finally {
+            setSentimentLoading(false);
+        }
+    };
+
+    const handleDownloadResume = async () => {
+        try {
+            const response = await axios.get(`${API_BASE}/candidates/${candidateId}/documents/resume/download`, {
+                responseType: 'blob',
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `resume_${candidateId}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Download error:", err);
+            alert("Failed to download resume");
         }
     };
 
@@ -73,47 +130,31 @@ const CandidateProfileModal = ({ isOpen, onClose, candidateId, candidateName }) 
     const tabs = [
         { id: 'overview', label: 'Overview' },
         { id: 'skills', label: 'Skills' },
+        { id: 'documents', label: 'Documents' },
         { id: 'predictions', label: 'AI Insights' },
         { id: 'sentiment', label: 'Sentiment' },
         { id: 'history', label: 'History' }
     ];
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
-            <div className="bg-[var(--bg-secondary)] rounded-[2.5rem] w-full max-w-5xl max-h-[90vh] overflow-hidden border border-[var(--border-primary)] animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-300">
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={onClose}></div>
+
+            <div className="relative bg-[var(--bg-primary)] border border-[var(--border-primary)] w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col text-[var(--text-primary)]">
                 {/* Header */}
-                <div className="p-8 border-b border-[var(--border-primary)] flex items-center justify-between">
+                <div className="p-8 border-b border-[var(--border-primary)] flex items-center justify-between bg-[var(--bg-accent)]/20">
                     <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shadow-lg shadow-indigo-500/20">
-                            <User size={32} />
+                        <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500">
+                            <User size={28} />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-black tracking-tight">{candidateName || 'Candidate Profile'}</h2>
-                            <div className="flex items-center gap-4 mt-2 text-sm text-[var(--text-muted)]">
-                                {profile?.basicInfo?.Location && (
-                                    <span className="flex items-center gap-1.5">
-                                        <MapPin size={14} className="text-indigo-500" />
-                                        {profile.basicInfo.Location}
-                                    </span>
-                                )}
-                                {profile?.basicInfo?.YearsOfExperience !== undefined && (
-                                    <span className="flex items-center gap-1.5">
-                                        <Briefcase size={14} className="text-emerald-500" />
-                                        {profile.basicInfo.YearsOfExperience} years exp
-                                    </span>
-                                )}
-                                {profile?.gamification && (
-                                    <span className="flex items-center gap-1.5">
-                                        <Zap size={14} className="text-amber-500" />
-                                        {profile.gamification.Points || 0} pts • Lvl {profile.gamification.Level || 1}
-                                    </span>
-                                )}
-                            </div>
+                            <h2 className="text-xl font-black tracking-tight">{candidateName || 'Candidate Profile'}</h2>
+                            <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-1 italic">View detailed candidate information</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-3 rounded-xl bg-[var(--bg-accent)] hover:bg-rose-500/10 hover:text-rose-500 transition-all"
+                        className="w-10 h-10 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-primary)] flex items-center justify-center text-[var(--text-muted)] hover:text-indigo-500 transition-colors"
                     >
                         <X size={20} />
                     </button>
@@ -125,7 +166,7 @@ const CandidateProfileModal = ({ isOpen, onClose, candidateId, candidateName }) 
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`px-6 py-3 text-sm font-bold rounded-t-xl transition-all ${activeTab === tab.id
+                            className={`px-6 py-3 text-sm font-black uppercase tracking-widest rounded-2xl transition-all ${activeTab === tab.id
                                 ? 'bg-indigo-500 text-white'
                                 : 'bg-[var(--bg-accent)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                                 }`}
@@ -137,6 +178,36 @@ const CandidateProfileModal = ({ isOpen, onClose, candidateId, candidateName }) 
 
                 {/* Content */}
                 <div className="p-8 overflow-y-auto max-h-[calc(90vh-220px)]">
+                    {/* Candidate Quick Info */}
+                    {!loading && !error && profile && (
+                        <div className="flex items-center gap-6 mb-8 pb-6 border-b border-[var(--border-primary)]">
+                            {profile?.basicInfo?.Location && (
+                                <span className="flex items-center gap-2 text-sm font-bold text-[var(--text-muted)]">
+                                    <MapPin size={14} className="text-indigo-500" />
+                                    {profile.basicInfo.Location}
+                                </span>
+                            )}
+                            {profile?.basicInfo?.YearsOfExperience !== undefined && (
+                                <span className="flex items-center gap-2 text-sm font-bold text-[var(--text-muted)]">
+                                    <Briefcase size={14} className="text-emerald-500" />
+                                    {profile.basicInfo.YearsOfExperience} years exp
+                                </span>
+                            )}
+                            {profile?.gamification && (
+                                <span className="flex items-center gap-2 text-sm font-bold text-[var(--text-muted)]">
+                                    <Zap size={14} className="text-amber-500" />
+                                    {profile.gamification.Points || 0} pts • Lvl {profile.gamification.Level || 1}
+                                </span>
+                            )}
+                            {profile?.basicInfo?.Email && (
+                                <span className="flex items-center gap-2 text-sm font-bold text-[var(--text-muted)]">
+                                    <Mail size={14} className="text-blue-500" />
+                                    {profile.basicInfo.Email}
+                                </span>
+                            )}
+                        </div>
+                    )}
+
                     {loading ? (
                         <div className="space-y-6">
                             {[1, 2, 3].map(i => (
@@ -287,6 +358,140 @@ const CandidateProfileModal = ({ isOpen, onClose, candidateId, candidateName }) 
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Quick Documents Access */}
+                                    <div className="glass-card rounded-2xl p-6 border border-[var(--border-primary)]">
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500 mb-4 flex items-center gap-2">
+                                            <FileText size={16} /> Documents
+                                        </h3>
+                                        <div className="space-y-3">
+                                            <button
+                                                onClick={() => setActiveTab('documents')}
+                                                className="w-full flex items-center justify-between p-4 bg-[var(--bg-accent)] rounded-xl hover:bg-indigo-500/10 transition-all group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <FileText size={20} className="text-indigo-500" />
+                                                    <span className="font-bold">View Documents</span>
+                                                </div>
+                                                <ChevronRight size={20} className="text-[var(--text-muted)] group-hover:text-indigo-500 transition-all" />
+                                            </button>
+                                            <p className="text-xs text-[var(--text-muted)] px-1">
+                                                View resume, certificates, and download documents. Check resume sentiment analysis.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Documents Tab */}
+                            {activeTab === 'documents' && (
+                                <div className="space-y-8">
+                                    {/* Resume Sentiment Analysis */}
+                                    <div className="glass-card rounded-2xl p-6 border border-[var(--border-primary)]">
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500 mb-4 flex items-center gap-2">
+                                            <Brain size={16} /> Resume Sentiment Analysis
+                                        </h3>
+                                        {sentimentLoading ? (
+                                            <div className="animate-pulse space-y-4">
+                                                <div className="h-20 bg-[var(--bg-accent)] rounded-xl"></div>
+                                            </div>
+                                        ) : resumeSentiment ? (
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between p-4 bg-[var(--bg-accent)] rounded-xl">
+                                                    <div className="flex items-center gap-3">
+                                                        {resumeSentiment.sentimentScore > 0.1 ? (
+                                                            <Smile size={32} className="text-emerald-500" />
+                                                        ) : resumeSentiment.sentimentScore < -0.1 ? (
+                                                            <Frown size={32} className="text-rose-500" />
+                                                        ) : (
+                                                            <Meh size={32} className="text-amber-500" />
+                                                        )}
+                                                        <div>
+                                                            <div className={`text-2xl font-black ${resumeSentiment.sentimentScore > 0.1 ? 'text-emerald-500' :
+                                                                resumeSentiment.sentimentScore < -0.1 ? 'text-rose-500' : 'text-amber-500'
+                                                                }`}>
+                                                                {resumeSentiment.sentimentScore}
+                                                            </div>
+                                                            <div className="text-sm text-[var(--text-muted)] font-bold">
+                                                                {resumeSentiment.sentimentLabel}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={fetchResumeSentiment}
+                                                        className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-sm font-bold text-indigo-500 hover:bg-indigo-500/20 transition-all"
+                                                    >
+                                                        Refresh
+                                                    </button>
+                                                </div>
+                                                <p className="text-sm text-[var(--text-muted)]">
+                                                    {resumeSentiment.analysis}
+                                                </p>
+                                                <p className="text-xs text-[var(--text-muted)]">
+                                                    Text length: {resumeSentiment.resumeTextLength} characters
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-6 text-[var(--text-muted)]">
+                                                <AlertTriangle size={24} className="mx-auto mb-2 text-amber-500" />
+                                                <p className="text-sm">No resume text available for sentiment analysis</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Documents List */}
+                                    <div className="glass-card rounded-2xl p-6 border border-[var(--border-primary)]">
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-emerald-500 mb-4 flex items-center gap-2">
+                                            <FileText size={16} /> Candidate Documents
+                                        </h3>
+                                        {documentsLoading ? (
+                                            <div className="animate-pulse space-y-4">
+                                                {[1, 2, 3].map(i => (
+                                                    <div key={i} className="h-16 bg-[var(--bg-accent)] rounded-xl"></div>
+                                                ))}
+                                            </div>
+                                        ) : documents.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {documents.map((doc, i) => (
+                                                    <div key={i} className="flex items-center justify-between p-4 bg-[var(--bg-accent)] rounded-xl hover:bg-[var(--bg-accent)]/80 transition-all">
+                                                        <div className="flex items-center gap-3">
+                                                            {doc.DocumentType === 'Resume' ? (
+                                                                <FileText size={24} className="text-indigo-500" />
+                                                            ) : doc.DocumentType === 'CoverLetter' ? (
+                                                                <File size={24} className="text-blue-500" />
+                                                            ) : (
+                                                                <Award size={24} className="text-amber-500" />
+                                                            )}
+                                                            <div>
+                                                                <div className="font-bold text-[var(--text-primary)]">
+                                                                    {doc.DocumentType}
+                                                                </div>
+                                                                {doc.UploadedAt && (
+                                                                    <div className="text-xs text-[var(--text-muted)]">
+                                                                        Uploaded: {new Date(doc.UploadedAt).toLocaleDateString()}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        {doc.DocumentType === 'Resume' && (
+                                                            <button
+                                                                onClick={handleDownloadResume}
+                                                                className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm font-bold text-emerald-500 hover:bg-emerald-500/20 transition-all"
+                                                            >
+                                                                <Download size={16} />
+                                                                Download
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-6 text-[var(--text-muted)]">
+                                                <FileText size={32} className="mx-auto mb-2 opacity-50" />
+                                                <p className="text-sm">No documents uploaded yet</p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
 
@@ -540,7 +745,7 @@ const CandidateProfileModal = ({ isOpen, onClose, candidateId, candidateName }) 
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

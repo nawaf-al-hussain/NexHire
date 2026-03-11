@@ -17,7 +17,7 @@ router.post('/login', async (req, res) => {
     try {
         // 1. Fetch the user's stored hash and ID
         const users = await query(
-            "SELECT UserID, Username, RoleID, PasswordHash FROM Users WHERE Username = ? AND IsActive = 1",
+            "SELECT userid, username, roleid, passwordhash FROM users WHERE username = ? AND isactive = true",
             [username]
         );
 
@@ -29,18 +29,18 @@ router.post('/login', async (req, res) => {
 
         // 2. Dev Bypass: If password is empty, let them in (Development Only)
         if (!password || password.trim() === '') {
-            const { PasswordHash, ...userSession } = user;
+            const { passwordhash, ...userSession } = user;
             return res.json(userSession);
         }
 
-        // 3. Verify password using the C# CLR function if password is provided
+        // 3. Verify password using the PostgreSQL function if password is provided
         const verificationResult = await query(
-            "SELECT dbo.VerifyPassword(?, ?) AS IsValid",
-            [password, user.PasswordHash]
+            "SELECT verifypassword(?, ?) AS isvalid",
+            [password, user.passwordhash]
         );
 
-        if (verificationResult[0].IsValid === 1) {
-            const { PasswordHash, ...userSession } = user;
+        if (verificationResult[0].isvalid === true || verificationResult[0].isvalid === 1) {
+            const { passwordhash, ...userSession } = user;
             res.json(userSession);
         } else {
             res.status(401).json({ error: "Invalid credentials." });

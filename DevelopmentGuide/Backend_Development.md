@@ -106,7 +106,7 @@ router.post('/shared', protect, authorize([1, 2]), handler); // Admin or Recruit
 ### Candidates — `/api/candidates`
 | Method | Path | Access | Description |
 |---|---|---|---|
-| GET | `/discover` | Candidate (3) | Discover all active jobs with skill matching (returns RequiredSkills with MeetsRequirement flag) |
+| GET | `/discover` | Candidate (3) | Discover all active jobs with skill matching (returns RequiredSkills with MeetsRequirement flag). Also returns SalaryMin and SalaryMax when job has transparent salary (IsTransparent=1) |
 | GET | `/matches` | Candidate (3) | Get matched jobs with match scores |
 | GET | `/applications` | Candidate (3) | Own applications |
 | GET | `/skills` | Candidate (3) | Get candidate's skills with proficiency levels |
@@ -235,3 +235,5 @@ router.post('/shared', protect, authorize([1, 2]), handler); // Admin or Recruit
 | PUT | `/email-queue/:id/retry` | Admin (1) | Retry a failed email |
 | DELETE | `/email-queue/:id` | Admin (1) | Delete an email from queue |
 | POST | `/email-queue/send-test` | Admin (1) | Add test email to queue |
+| GET | `/sql-views` | Public | Get list of all database views organized by category |
+| GET | `/sql-views/:viewName` | Public | Execute SELECT * FROM viewName and return data |

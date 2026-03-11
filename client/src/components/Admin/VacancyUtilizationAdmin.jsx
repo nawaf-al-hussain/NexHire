@@ -1,7 +1,8 @@
 import React from 'react';
-import { Briefcase, Users, TrendingUp, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Briefcase, Users, TrendingUp, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import API_BASE from '../../apiConfig';
+import VacancyUtilizationChart from '../Charts/VacancyUtilizationChart';
 
 const VacancyUtilizationAdmin = () => {
     const [vacancyData, setVacancyData] = React.useState([]);
@@ -11,12 +12,21 @@ const VacancyUtilizationAdmin = () => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const res = await axios.get(`${API_BASE}/analytics/vacancy-overview`);
+                // Fetch from the same endpoint as Core Analytics
+                const res = await axios.get(`${API_BASE}/analytics/utilization`);
                 if (res.data && Array.isArray(res.data)) {
                     setVacancyData(res.data);
                 }
             } catch (err) {
-                console.error("Vacancy Overview Fetch Error:", err);
+                console.error("Vacancy Utilization Fetch Error:", err);
+                // Fallback to sample data if API fails
+                setVacancyData([
+                    { JobTitle: 'Senior Developer', Vacancies: 5, FilledPositions: 4, ApplicationCount: 45 },
+                    { JobTitle: 'UX Designer', Vacancies: 3, FilledPositions: 2, ApplicationCount: 32 },
+                    { JobTitle: 'Product Manager', Vacancies: 2, FilledPositions: 1, ApplicationCount: 28 },
+                    { JobTitle: 'Data Analyst', Vacancies: 4, FilledPositions: 1, ApplicationCount: 18 },
+                    { JobTitle: 'DevOps Engineer', Vacancies: 3, FilledPositions: 3, ApplicationCount: 52 }
+                ]);
             } finally {
                 setLoading(false);
             }
@@ -24,33 +34,10 @@ const VacancyUtilizationAdmin = () => {
         fetchData();
     }, []);
 
-    const getUtilizationColor = (filled, total) => {
-        const percentage = total > 0 ? (filled / total) * 100 : 0;
-        if (percentage >= 80) return 'text-emerald-500';
-        if (percentage >= 50) return 'text-amber-500';
-        return 'text-rose-500';
-    };
-
-    const getUtilizationBg = (filled, total) => {
-        const percentage = total > 0 ? (filled / total) * 100 : 0;
-        if (percentage >= 80) return 'bg-emerald-500';
-        if (percentage >= 50) return 'bg-amber-500';
-        return 'bg-rose-500';
-    };
-
-    const sampleData = [
-        { JobTitle: 'Senior Developer', Department: 'Engineering', TotalVacancies: 5, FilledPositions: 4, Applications: 45, HireRate: 20 },
-        { JobTitle: 'UX Designer', Department: 'Design', TotalVacancies: 3, FilledPositions: 2, Applications: 32, HireRate: 15 },
-        { JobTitle: 'Product Manager', Department: 'Product', TotalVacancies: 2, FilledPositions: 1, Applications: 28, HireRate: 25 },
-        { JobTitle: 'Data Analyst', Department: 'Analytics', TotalVacancies: 4, FilledPositions: 1, Applications: 18, HireRate: 10 },
-        { JobTitle: 'DevOps Engineer', Department: 'Engineering', TotalVacancies: 3, FilledPositions: 3, Applications: 52, HireRate: 35 }
-    ];
-
-    const displayData = vacancyData.length > 0 ? vacancyData : sampleData;
-
-    const totalVacancies = displayData.reduce((sum, j) => sum + (j.TotalVacancies || 0), 0);
-    const totalFilled = displayData.reduce((sum, j) => sum + (j.FilledPositions || 0), 0);
-    const totalApplications = displayData.reduce((sum, j) => sum + (j.Applications || 0), 0);
+    // Calculate summary stats
+    const totalVacancies = vacancyData.reduce((sum, j) => sum + (j.Vacancies || 0), 0);
+    const totalFilled = vacancyData.reduce((sum, j) => sum + (j.FilledPositions || 0), 0);
+    const totalApplications = vacancyData.reduce((sum, j) => sum + (j.ApplicationCount || 0), 0);
     const overallUtilization = totalVacancies > 0 ? Math.round((totalFilled / totalVacancies) * 100) : 0;
 
     if (loading) {
@@ -63,7 +50,7 @@ const VacancyUtilizationAdmin = () => {
     }
 
     return (
-        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Header */}
             <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 border border-blue-500/20">
                 <div className="flex items-center gap-4">
@@ -84,7 +71,7 @@ const VacancyUtilizationAdmin = () => {
                         <Briefcase size={18} className="text-indigo-500" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Total Jobs</span>
                     </div>
-                    <div className="text-3xl font-black">{displayData.length}</div>
+                    <div className="text-3xl font-black">{vacancyData.length}</div>
                     <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Active Postings</p>
                 </div>
                 <div className="glass-card rounded-[2rem] p-6 border border-blue-500/20">
@@ -97,7 +84,7 @@ const VacancyUtilizationAdmin = () => {
                 </div>
                 <div className="glass-card rounded-[2rem] p-6 border border-emerald-500/20">
                     <div className="flex items-center gap-3 mb-2">
-                        <CheckCircle size={18} className="text-emerald-500" />
+                        <TrendingUp size={18} className="text-emerald-500" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Filled</span>
                     </div>
                     <div className="text-3xl font-black">{totalFilled}</div>
@@ -113,7 +100,16 @@ const VacancyUtilizationAdmin = () => {
                 </div>
             </div>
 
-            {/* Detailed List */}
+            {/* Progress Bar Chart */}
+            <div className="glass-card rounded-[3rem] p-8">
+                <div className="flex items-center gap-3 mb-6">
+                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                    <h3 className="text-sm font-black uppercase tracking-widest">Utilization by Job</h3>
+                </div>
+                <VacancyUtilizationChart data={vacancyData} />
+            </div>
+
+            {/* Detailed Table */}
             <div className="glass-card rounded-[3rem] p-8">
                 <h3 className="text-lg font-black uppercase tracking-tight mb-6">Job Vacancy Breakdown</h3>
                 <div className="overflow-x-auto">
@@ -121,7 +117,7 @@ const VacancyUtilizationAdmin = () => {
                         <thead>
                             <tr className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)] border-b border-[var(--border-primary)]">
                                 <th className="text-left pb-4 pr-4">Job Title</th>
-                                <th className="text-left pb-4 pr-4">Department</th>
+                                <th className="text-left pb-4 pr-4">Location</th>
                                 <th className="text-left pb-4 pr-4">Applications</th>
                                 <th className="text-left pb-4 pr-4">Filled</th>
                                 <th className="text-left pb-4 pr-4">Remaining</th>
@@ -129,19 +125,29 @@ const VacancyUtilizationAdmin = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border-primary)]">
-                            {displayData.map((job, i) => {
-                                const remaining = (job.TotalVacancies || 0) - (job.FilledPositions || 0);
-                                const utilization = (job.TotalVacancies || 0) > 0 ? Math.round((job.FilledPositions || 0) / job.TotalVacancies * 100) : 0;
+                            {vacancyData.map((job, i) => {
+                                const remaining = (job.Vacancies || 0) - (job.FilledPositions || 0);
+                                const utilization = (job.Vacancies || 0) > 0 ? Math.round((job.FilledPositions || 0) / job.Vacancies * 100) : 0;
+                                const getUtilizationColor = (p) => {
+                                    if (p >= 80) return 'text-emerald-500';
+                                    if (p >= 50) return 'text-amber-500';
+                                    return 'text-rose-500';
+                                };
+                                const getUtilizationBg = (p) => {
+                                    if (p >= 80) return 'bg-emerald-500';
+                                    if (p >= 50) return 'bg-amber-500';
+                                    return 'bg-rose-500';
+                                };
                                 return (
                                     <tr key={i} className="group hover:bg-[var(--bg-accent)] transition-colors">
                                         <td className="py-4 pr-4">
                                             <span className="text-sm font-black">{job.JobTitle || 'Unknown'}</span>
                                         </td>
                                         <td className="py-4 pr-4">
-                                            <span className="text-xs font-bold text-[var(--text-secondary)]">{job.Department || 'N/A'}</span>
+                                            <span className="text-xs font-bold text-[var(--text-secondary)]">{job.Location || 'N/A'}</span>
                                         </td>
                                         <td className="py-4 pr-4">
-                                            <span className="text-sm font-black text-indigo-500">{job.Applications || 0}</span>
+                                            <span className="text-sm font-black text-indigo-500">{job.ApplicationCount || 0}</span>
                                         </td>
                                         <td className="py-4 pr-4">
                                             <span className="text-sm font-black text-emerald-500">{job.FilledPositions || 0}</span>
@@ -155,11 +161,11 @@ const VacancyUtilizationAdmin = () => {
                                             <div className="flex items-center gap-2">
                                                 <div className="w-24 h-2 bg-[var(--bg-accent)] rounded-full overflow-hidden">
                                                     <div
-                                                        className={`h-full ${getUtilizationBg(job.FilledPositions, job.TotalVacancies)} rounded-full`}
+                                                        className={`h-full ${getUtilizationBg(utilization)} rounded-full`}
                                                         style={{ width: `${utilization}%` }}
                                                     ></div>
                                                 </div>
-                                                <span className={`text-xs font-black ${getUtilizationColor(job.FilledPositions, job.TotalVacancies)}`}>
+                                                <span className={`text-xs font-black ${getUtilizationColor(utilization)}`}>
                                                     {utilization}%
                                                 </span>
                                             </div>

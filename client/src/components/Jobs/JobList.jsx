@@ -1,25 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import JobCard from './JobCard';
-import { Loader2, Search, Filter, Briefcase } from 'lucide-react';
+import { Loader2, Search, Filter, Briefcase, Archive, ArchiveRestore, Plus, Bot, FileX } from 'lucide-react';
 import API_BASE from '../../apiConfig';
 
-const JobList = ({ refreshTrigger, onDeleteJob, onFindMatches, onOpenPipeline, onUpdateJob }) => {
+const JobList = ({ refreshTrigger, onDeleteJob, onFindMatches, onOpenPipeline, onUpdateJob, onOpenJobModal, onOpenScreeningBot, onOpenAutoRejection }) => {
     const [jobs, setJobs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [showArchived, setShowArchived] = useState(false);
 
     const [matches, setMatches] = useState({});
 
     useEffect(() => {
         fetchJobs();
-    }, [refreshTrigger]);
+    }, [refreshTrigger, showArchived]);
 
     const fetchJobs = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_BASE}/jobs`);
+            // Fetch jobs with isActive filter based on showArchived state
+            const isActiveFilter = showArchived ? 'false' : 'true';
+            const res = await axios.get(`${API_BASE}/jobs?isActive=${isActiveFilter}`);
             const jobsData = res.data;
             setJobs(jobsData);
             setError('');
@@ -48,10 +51,25 @@ const JobList = ({ refreshTrigger, onDeleteJob, onFindMatches, onOpenPipeline, o
         }
     };
 
-    const filteredJobs = jobs.filter(job =>
-        (job.JobTitle ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (job.Location ?? '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredJobs = jobs.filter(job => {
+        // Filter by search term only (server-side filtering for isActive)
+        return (job.JobTitle ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (job.Location ?? '').toLowerCase().includes(searchTerm.toLowerCase());
+    });
+
+    // Restore job to active
+    const handleRestoreJob = async (jobId) => {
+        if (window.confirm("Restore this job posting to active status?")) {
+            try {
+                await axios.put(`${API_BASE}/jobs/${jobId}`, { isActive: true });
+                // Refresh jobs to update the list
+                fetchJobs();
+            } catch (err) {
+                console.error("Restore Job Error:", err);
+                alert("Failed to restore job.");
+            }
+        }
+    };
 
     if (loading) {
         return (
@@ -73,6 +91,28 @@ const JobList = ({ refreshTrigger, onDeleteJob, onFindMatches, onOpenPipeline, o
 
     return (
         <div className="space-y-8">
+            {/* Gradient Header */}
+            <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 border border-indigo-500/20">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                            <Briefcase size={28} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black uppercase tracking-tight">Active Job Postings</h2>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Manage and track your job listings</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onOpenJobModal}
+                        className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+                    >
+                        <Plus size={18} />
+                        Post Job
+                    </button>
+                </div>
+            </div>
+
             <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
                 <div className="relative flex-1 w-full max-w-xl group">
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-5 h-5 group-focus-within:text-indigo-500 transition-colors" />
@@ -85,12 +125,36 @@ const JobList = ({ refreshTrigger, onDeleteJob, onFindMatches, onOpenPipeline, o
                     />
                 </div>
                 <div className="flex items-center gap-2">
-                    <button className="p-5 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl text-[var(--text-secondary)] hover:text-indigo-500 transition-all">
-                        <Filter size={20} />
+                    <button
+                        onClick={() => setShowArchived(!showArchived)}
+                        className={`p-4 border rounded-2xl transition-all ${showArchived
+                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-500'
+                            : 'bg-[var(--bg-accent)] border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-amber-500'
+                            }`}
+                        title={showArchived ? 'Show Active' : 'Show Archives'}
+                    >
+                        {showArchived ? <ArchiveRestore size={18} /> : <Archive size={18} />}
                     </button>
-                    <div className="px-6 py-4 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl flex items-center gap-3">
-                        <Briefcase size={16} className="text-indigo-500" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">{jobs.length} Total Roles</span>
+                    <button
+                        onClick={onOpenAutoRejection}
+                        className="p-4 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl text-[var(--text-secondary)] hover:text-rose-500 transition-all"
+                        title="Auto Rejection"
+                    >
+                        <FileX size={18} />
+                    </button>
+                    <button
+                        onClick={onOpenScreeningBot}
+                        className="p-4 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl text-[var(--text-secondary)] hover:text-indigo-500 transition-all"
+                        title="Screening Bot"
+                    >
+                        <Bot size={18} />
+                    </button>
+                    <button className="p-4 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl text-[var(--text-secondary)] hover:text-indigo-500 transition-all">
+                        <Filter size={18} />
+                    </button>
+                    <div className="px-5 py-3 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl flex items-center gap-3">
+                        <Briefcase size={14} className="text-indigo-500" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">{filteredJobs.length} {showArchived ? 'Archived' : 'Active'} Roles</span>
                     </div>
                 </div>
             </div>
@@ -109,11 +173,12 @@ const JobList = ({ refreshTrigger, onDeleteJob, onFindMatches, onOpenPipeline, o
                         <JobCard
                             key={job.JobID}
                             job={job}
-                            onDelete={onDeleteJob}
+                            onDelete={showArchived ? handleRestoreJob : onDeleteJob}
                             onFindMatches={() => onFindMatches(job)}
                             onOpenPipeline={() => onOpenPipeline(job)}
                             onUpdateJob={onUpdateJob}
                             matches={matches[job.JobID] || []}
+                            isArchived={showArchived}
                         />
                     ))}
                 </div>

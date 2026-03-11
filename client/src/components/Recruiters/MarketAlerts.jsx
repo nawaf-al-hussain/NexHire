@@ -121,21 +121,28 @@ const MarketAlerts = () => {
     const warningCount = alerts.filter(a => a.Severity >= 3 && a.Severity < 5).length;
 
     return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <Bell className="w-5 h-5 text-indigo-500" />
-                    <h2 className="text-lg font-black uppercase tracking-tighter">Market Alerts</h2>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+            {/* Gradient Header */}
+            <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-amber-500/5 to-orange-500/5 border border-amber-500/20">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                            <Bell size={28} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black uppercase tracking-tight">Market Alerts</h2>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Stay updated on market trends</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleRefresh}
+                        disabled={refreshing}
+                        className="px-4 py-2 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-amber-500/50 transition-all flex items-center gap-2"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </button>
                 </div>
-                <button
-                    onClick={handleRefresh}
-                    disabled={refreshing}
-                    className="px-4 py-2 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-indigo-500/50 transition-all flex items-center gap-2"
-                >
-                    <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                    Refresh
-                </button>
             </div>
 
             {/* Summary Cards */}

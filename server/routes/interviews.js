@@ -10,24 +10,24 @@ const { protect, authorize } = require('../middleware/rbac');
  */
 router.post('/schedule', protect, authorize(2), async (req, res) => {
     const { applicationId, interviewStart, interviewEnd } = req.body;
-    const userID = req.user.UserID;
+    const userID = req.user.userid;
 
     if (!applicationId || !interviewStart || !interviewEnd) {
         return res.status(400).json({ error: "Missing required fields: applicationId, interviewStart, interviewEnd." });
     }
 
     try {
-        // 1. Fetch matching RecruiterID from UserID
-        const recruiterCheck = await query("SELECT RecruiterID FROM Recruiters WHERE UserID = ?", [userID]);
+        // 1. Fetch matching recruiterid from userid
+        const recruiterCheck = await query("SELECT recruiterid FROM recruiters WHERE userid = ?", [userID]);
         if (recruiterCheck.length === 0) {
             return res.status(403).json({ error: "Unauthorized. Profile not registered as a valid Recruiter." });
         }
 
-        const recruiterId = recruiterCheck[0].RecruiterID;
+        const recruiterId = recruiterCheck[0].recruiterid;
 
-        // 2. Validate ApplicationID belongs to a Job posted by this Recruiter/Company
+        // 2. Validate applicationid belongs to a Job posted by this Recruiter/Company
         // Optional strictly enforcing security, but we'll assume the Recruiter ID is good for demo insertion
-        const appCheck = await query("SELECT ApplicationID FROM Applications WHERE ApplicationID = ?", [applicationId]);
+        const appCheck = await query("SELECT applicationid FROM applications WHERE applicationid = ?", [applicationId]);
         if (appCheck.length === 0) {
             return res.status(404).json({ error: "Application not found." });
         }
@@ -35,14 +35,14 @@ router.post('/schedule', protect, authorize(2), async (req, res) => {
         // 3. Use the integrated stored procedure for scheduling
         // This handles timezone conversion and safely returns the identity
         const result = await query(
-            `EXEC sp_ScheduleInterviewWithTimezone ?, ?, ?, ?`,
+            `SELECT * FROM sp_scheduleinterviewwithtimezone(?, ?, ?, ?)`,
             [applicationId, recruiterId, interviewStart, interviewEnd]
         );
 
         res.status(201).json({
             success: true,
             message: "Interview scheduled successfully.",
-            scheduleId: result[0].ScheduleID
+            scheduleId: result[0].scheduleid
         });
     } catch (err) {
         console.error("Schedule Interview Error:", err.message);
@@ -56,28 +56,28 @@ router.post('/schedule', protect, authorize(2), async (req, res) => {
  * @access  Private (Recruiter)
  */
 router.get('/', protect, authorize(2), async (req, res) => {
-    const userID = req.user.UserID;
+    const userID = req.user.userid;
 
     try {
-        const recruiterCheck = await query("SELECT RecruiterID FROM Recruiters WHERE UserID = ?", [userID]);
+        const recruiterCheck = await query("SELECT recruiterid FROM recruiters WHERE userid = ?", [userID]);
         if (recruiterCheck.length === 0) {
             return res.status(403).json({ error: "Unauthorized. Profile not registered as a valid Recruiter." });
         }
 
-        const recruiterId = recruiterCheck[0].RecruiterID;
+        const recruiterId = recruiterCheck[0].recruiterid;
 
         const interviews = await query(`
-            SELECT i.ScheduleID, i.InterviewStart, i.InterviewEnd, i.CandidateConfirmed, 
-                   c.FullName as CandidateName, j.JobTitle, a.ApplicationID,
-                   CASE WHEN i.InterviewStart > GETDATE() THEN 'Upcoming' ELSE 'Completed' END AS Status,
-                   DATEDIFF(MINUTE, i.InterviewStart, i.InterviewEnd) AS Duration,
-                   'Video Call' AS Platform
-            FROM InterviewSchedules i
-            JOIN Applications a ON i.ApplicationID = a.ApplicationID
-            JOIN Candidates c ON a.CandidateID = c.CandidateID
-            JOIN JobPostings j ON a.JobID = j.JobID
-            WHERE i.RecruiterID = ?
-            ORDER BY i.InterviewStart ASC
+            SELECT i.scheduleid, i.interviewstart, i.interviewend, i.candidateconfirmed, 
+                   c.fullname as candidatename, j.jobtitle, a.applicationid,
+                   CASE WHEN i.interviewstart > NOW() THEN 'Upcoming' ELSE 'Completed' END AS status,
+                   EXTRACT(EPOCH FROM (i.interviewend - i.interviewstart))/60 AS duration,
+                   'Video Call' AS platform
+            FROM interviewschedules i
+            JOIN applications a ON i.applicationid = a.applicationid
+            JOIN candidates c ON a.candidateid = c.candidateid
+            JOIN jobpostings j ON a.jobid = j.jobid
+            WHERE i.recruiterid = ?
+            ORDER BY i.interviewstart ASC
         `, [recruiterId]);
 
         res.json(interviews);
@@ -100,12 +100,12 @@ router.get('/', protect, authorize(2), async (req, res) => {
  * - CommunicationScore (INT, 1-10)
  * - CultureFitScore (INT, 1-10)
  * - Comments (NVARCHAR, optional)
- * - SentimentScore (FLOAT, calculated by CLR trigger)
- * - CreatedAt (DATETIME, default GETDATE())
+ * - SentimentScore (FLOAT, calculated by trigger)
+ * - CreatedAt (DATETIME, default NOW())
  */
 router.post('/feedback', protect, authorize(2), async (req, res) => {
     const { applicationId, technicalScore, communicationScore, cultureFitScore, comments } = req.body;
-    const userID = req.user.UserID;
+    const userID = req.user.userid;
 
     // Validate required fields
     if (!applicationId || !technicalScore || !communicationScore || !cultureFitScore) {
@@ -119,23 +119,23 @@ router.post('/feedback', protect, authorize(2), async (req, res) => {
     }
 
     try {
-        // Get RecruiterID from UserID
-        const recruiterCheck = await query("SELECT RecruiterID, UserID FROM Recruiters WHERE UserID = ?", [userID]);
+        // Get recruiterid from userid
+        const recruiterCheck = await query("SELECT recruiterid, userid FROM recruiters WHERE userid = ?", [userID]);
         if (recruiterCheck.length === 0) {
             console.error("Feedback Error: User not registered as recruiter. UserID:", userID);
             return res.status(403).json({ error: "Unauthorized. Profile not registered as a valid Recruiter." });
         }
 
         // InterviewerID should be the UserID (not RecruiterID) per the FK constraint
-        const interviewerId = recruiterCheck[0].UserID;  // Use UserID for InterviewerID FK
-        console.log("Submitting feedback - UserID:", userID, "InterviewerID:", interviewerId, "RecruiterID:", recruiterCheck[0].RecruiterID);
+        const interviewerId = recruiterCheck[0].userid;  // Use UserID for InterviewerID FK
+        console.log("Submitting feedback - UserID:", userID, "InterviewerID:", interviewerId, "RecruiterID:", recruiterCheck[0].recruiterid);
 
         // Verify application exists and is at Interview stage
         const appCheck = await query(`
-            SELECT a.ApplicationID, a.StatusID, s.StatusName 
-            FROM Applications a
-            JOIN ApplicationStatus s ON a.StatusID = s.StatusID
-            WHERE a.ApplicationID = ?
+            SELECT a.applicationid, a.statusid, s.statusname 
+            FROM applications a
+            JOIN applicationstatus s ON a.statusid = s.statusid
+            WHERE a.applicationid = ?
         `, [applicationId]);
 
         if (appCheck.length === 0) {
@@ -143,20 +143,18 @@ router.post('/feedback', protect, authorize(2), async (req, res) => {
         }
 
         // Only allow feedback for applications at Interview stage (3)
-        if (appCheck[0].StatusID !== 3) {
-            return res.status(400).json({ error: `Cannot submit feedback. Application is at "${appCheck[0].StatusName}" stage (requires Interview stage).` });
+        if (appCheck[0].statusid !== 3) {
+            return res.status(400).json({ error: `Cannot submit feedback. Application is at "${appCheck[0].statusname}" stage (requires Interview stage).` });
         }
 
-        // Insert feedback - use SCOPE_IDENTITY() instead of OUTPUT clause
-        // (SQL Server doesn't allow OUTPUT clause when table has enabled triggers)
-        await query(`
-            INSERT INTO InterviewFeedback (ApplicationID, InterviewerID, TechnicalScore, CommunicationScore, CultureFitScore, Comments)
+        // Insert feedback - use RETURNING instead of SCOPE_IDENTITY()
+        const feedbackResult = await query(`
+            INSERT INTO interviewfeedback (applicationid, interviewerid, technicalscore, communicationscore, culturefitscore, comments)
             VALUES (?, ?, ?, ?, ?, ?)
+            RETURNING feedbackid
         `, [applicationId, interviewerId, technicalScore, communicationScore, cultureFitScore, comments || null]);
-
-        // Get the inserted ID using SCOPE_IDENTITY
-        const idResult = await query("SELECT SCOPE_IDENTITY() AS FeedbackID");
-        const feedbackId = idResult[0].FeedbackID;
+        
+        const feedbackId = feedbackResult[0].feedbackid;
 
         console.log("Feedback submitted successfully. FeedbackID:", feedbackId);
 
@@ -181,26 +179,26 @@ router.get('/feedback/:applicationId', protect, authorize(2), async (req, res) =
 
     try {
         const feedback = await query(`
-            SELECT f.FeedbackID, f.TechnicalScore, f.CommunicationScore, f.CultureFitScore, 
-                   f.Comments, f.SentimentScore, f.CreatedAt,
-                   u.Username as InterviewerName,
-                   c.FullName as CandidateName,
-                   j.JobTitle
-            FROM InterviewFeedback f
-            JOIN Users u ON f.InterviewerID = u.UserID
-            JOIN Applications a ON f.ApplicationID = a.ApplicationID
-            JOIN Candidates c ON a.CandidateID = c.CandidateID
-            JOIN JobPostings j ON a.JobID = j.JobID
-            WHERE f.ApplicationID = ?
-            ORDER BY f.CreatedAt DESC
+            SELECT f.feedbackid, f.technicalscore, f.communicationscore, f.culturefitscore, 
+                   f.comments, f.sentimentscore, f.createdat,
+                   u.username as interviewername,
+                   c.fullname as candidatename,
+                   j.jobtitle
+            FROM interviewfeedback f
+            JOIN users u ON f.interviewerid = u.userid
+            JOIN applications a ON f.applicationid = a.applicationid
+            JOIN candidates c ON a.candidateid = c.candidateid
+            JOIN jobpostings j ON a.jobid = j.jobid
+            WHERE f.applicationid = ?
+            ORDER BY f.createdat DESC
         `, [applicationId]);
 
         // Calculate average scores
         if (feedback.length > 0) {
             const avgScores = feedback.reduce((acc, f) => {
-                acc.technical += f.TechnicalScore;
-                acc.communication += f.CommunicationScore;
-                acc.culture += f.CultureFitScore;
+                acc.technical += f.technicalscore;
+                acc.communication += f.communicationscore;
+                acc.culture += f.culturefitscore;
                 return acc;
             }, { technical: 0, communication: 0, culture: 0 });
 
@@ -241,7 +239,7 @@ router.get('/feedback/:applicationId', protect, authorize(2), async (req, res) =
  */
 router.post('/transcription', protect, authorize(2), async (req, res) => {
     const { scheduleId, videoFileUrl } = req.body;
-    const userID = req.user.UserID;
+    const userID = req.user.userid;
 
     if (!scheduleId) {
         return res.status(400).json({ error: "Missing required field: scheduleId." });
@@ -249,19 +247,21 @@ router.post('/transcription', protect, authorize(2), async (req, res) => {
 
     try {
         // Verify recruiter
-        const recruiterCheck = await query("SELECT RecruiterID FROM Recruiters WHERE UserID = ?", [userID]);
+        const recruiterCheck = await query("SELECT recruiterid FROM recruiters WHERE userid = ?", [userID]);
         if (recruiterCheck.length === 0) {
             return res.status(403).json({ error: "Unauthorized. Profile not registered as a valid Recruiter." });
         }
 
+        const recruiterId = recruiterCheck[0].recruiterid;
+
         // Verify schedule exists
         const scheduleCheck = await query(`
-            SELECT i.ScheduleID, i.ApplicationID, c.FullName as CandidateName, j.JobTitle
-            FROM InterviewSchedules i
-            JOIN Applications a ON i.ApplicationID = a.ApplicationID
-            JOIN Candidates c ON a.CandidateID = c.CandidateID
-            JOIN JobPostings j ON a.JobID = j.JobID
-            WHERE i.ScheduleID = ?
+            SELECT i.scheduleid, i.applicationid, c.fullname as candidatename, j.jobtitle
+            FROM interviewschedules i
+            JOIN applications a ON i.applicationid = a.applicationid
+            JOIN candidates c ON a.candidateid = c.candidateid
+            JOIN jobpostings j ON a.jobid = j.jobid
+            WHERE i.scheduleid = ?
         `, [scheduleId]);
 
         if (scheduleCheck.length === 0) {
@@ -270,17 +270,17 @@ router.post('/transcription', protect, authorize(2), async (req, res) => {
 
         // Insert transcription record
         const result = await query(`
-            INSERT INTO InterviewTranscriptions (ScheduleID, AudioFileURL, ProcessingStatus)
-            OUTPUT inserted.TranscriptionID
+            INSERT INTO interviewtranscriptions (scheduleid, audiofileurl, processingstatus)
             VALUES (?, ?, 'Pending')
+            RETURNING transcriptionid
         `, [scheduleId, videoFileUrl || null]);
 
         res.status(201).json({
             success: true,
             message: "Transcription record created. Upload video to process.",
-            transcriptionId: result[0].TranscriptionID,
-            candidateName: scheduleCheck[0].CandidateName,
-            jobTitle: scheduleCheck[0].JobTitle
+            transcriptionId: result[0].transcriptionid,
+            candidateName: scheduleCheck[0].candidatename,
+            jobTitle: scheduleCheck[0].jobtitle
         });
     } catch (err) {
         console.error("Create Transcription Error:", err.message);
@@ -298,16 +298,16 @@ router.get('/transcription/:scheduleId', protect, authorize(2), async (req, res)
 
     try {
         const transcription = await query(`
-            SELECT t.TranscriptionID, t.ScheduleID, t.AudioFileURL, t.TranscriptionText, 
-                   t.SpeakerDiarization, t.SentimentBySegment, t.ConfidenceScore, t.ProcessingStatus, t.ProcessedAt, t.CreatedAt,
-                   c.FullName as CandidateName, j.JobTitle
-            FROM InterviewTranscriptions t
-            JOIN InterviewSchedules i ON t.ScheduleID = i.ScheduleID
-            JOIN Applications a ON i.ApplicationID = a.ApplicationID
-            JOIN Candidates c ON a.CandidateID = c.CandidateID
-            JOIN JobPostings j ON a.JobID = j.JobID
-            WHERE t.ScheduleID = ?
-            ORDER BY t.CreatedAt DESC
+            SELECT t.transcriptionid, t.scheduleid, t.audiofileurl, t.transcriptiontext, 
+                   t.speakerdiarization, t.sentimentbysegment, t.confidencescore, t.processingstatus, t.processedat, t.createdat,
+                   c.fullname as candidatename, j.jobtitle
+            FROM interviewtranscriptions t
+            JOIN interviewschedules i ON t.scheduleid = i.scheduleid
+            JOIN applications a ON i.applicationid = a.applicationid
+            JOIN candidates c ON a.candidateid = c.candidateid
+            JOIN jobpostings j ON a.jobid = j.jobid
+            WHERE t.scheduleid = ?
+            ORDER BY t.createdat DESC
         `, [scheduleId]);
 
         res.json(transcription);
@@ -382,14 +382,14 @@ router.post('/transcription/:transcriptionId/process', protect, authorize(2), as
 
         // Update transcription record - only use columns that exist in DB
         await query(`
-            UPDATE InterviewTranscriptions 
-            SET TranscriptionText = ?, 
-                SpeakerDiarization = ?,
-                SentimentBySegment = ?,
-                ConfidenceScore = ?,
-                ProcessingStatus = 'Completed',
-                ProcessedAt = GETDATE()
-            WHERE TranscriptionID = ?
+            UPDATE interviewtranscriptions 
+            SET transcriptiontext = ?, 
+                speakerdiarization = ?,
+                sentimentbysegment = ?,
+                confidencescore = ?,
+                processingstatus = 'Completed',
+                processedat = NOW()
+            WHERE transcriptionid = ?
         `, [transcriptionText, speakerDiarization, sentimentLabel, parseFloat(sentimentScore.toFixed(2)), transcriptionId]);
 
         res.json({
@@ -422,13 +422,13 @@ router.post('/generate-questions', protect, authorize(2), async (req, res) => {
 
     try {
         // Verify recruiter
-        const recruiterCheck = await query("SELECT RecruiterID FROM Recruiters WHERE UserID = ?", [req.user.UserID]);
+        const recruiterCheck = await query("SELECT recruiterid FROM recruiters WHERE userid = ?", [req.user.userid]);
         if (recruiterCheck.length === 0) {
             return res.status(403).json({ error: "Unauthorized. Profile not registered as a valid Recruiter." });
         }
 
         // Verify job exists
-        const jobCheck = await query("SELECT JobID, JobTitle, Location FROM JobPostings WHERE JobID = ?", [jobId]);
+        const jobCheck = await query("SELECT jobid, jobtitle, location FROM jobpostings WHERE jobid = ?", [jobId]);
         if (jobCheck.length === 0) {
             return res.status(404).json({ error: "Job not found." });
         }
@@ -441,14 +441,14 @@ router.post('/generate-questions', protect, authorize(2), async (req, res) => {
         let questions;
         try {
             questions = await query(
-                "EXEC sp_GenerateInterviewQuestions @JobID = ?, @QuestionCount = ?, @DifficultyLevel = ?",
+                "SELECT * FROM sp_generateinterviewquestions(?, ?, ?)",
                 [jobId, count, difficulty]
             );
         } catch (spError) {
             console.error("Stored Procedure Error:", spError.message);
             // If stored procedure fails, generate questions dynamically
             const jobSkills = await query(
-                "SELECT js.SkillID, s.SkillName, js.IsMandatory FROM JobSkills js JOIN Skills s ON js.SkillID = s.SkillID WHERE js.JobID = ? AND js.IsMandatory = 1",
+                "SELECT js.skillid, s.skillname, js.ismandatory FROM jobskills js JOIN skills s ON js.skillid = s.skillid WHERE js.jobid = ? AND js.ismandatory = TRUE",
                 [jobId]
             );
 
@@ -458,12 +458,12 @@ router.post('/generate-questions', protect, authorize(2), async (req, res) => {
             jobSkills.forEach(skill => {
                 questions.push({
                     QuestionType: 'Technical',
-                    SkillName: skill.SkillName,
-                    QuestionText: `Explain your experience with ${skill.SkillName} and provide an example project.`,
+                    SkillName: skill.skillname,
+                    QuestionText: `Explain your experience with ${skill.skillname} and provide an example project.`,
                     ExpectedKeywords: JSON.stringify(["experience", "project", "implementation", "challenge"]),
                     ScoringGuide: "Assess depth of knowledge, practical application, problem-solving",
                     DifficultyLevel: difficulty,
-                    Priority: skill.IsMandatory ? 'High Priority' : 'Medium Priority'
+                    Priority: skill.ismandatory ? 'High Priority' : 'Medium Priority'
                 });
             });
 
@@ -509,9 +509,9 @@ router.post('/generate-questions', protect, authorize(2), async (req, res) => {
         res.json({
             success: true,
             job: {
-                jobId: job.JobID,
-                jobTitle: job.JobTitle,
-                location: job.Location
+                jobId: job.jobid,
+                jobTitle: job.jobtitle,
+                location: job.location
             },
             questions: formattedQuestions,
             totalQuestions: formattedQuestions.length
@@ -532,12 +532,12 @@ router.get('/generated-questions/:jobId', protect, authorize(2), async (req, res
 
     try {
         const questions = await query(`
-            SELECT QuestionID, QuestionType, SkillID, DifficultyLevel, QuestionText, 
-                   ExpectedAnswerKeywords, ScoringRubric, UsedCount, SuccessRate, 
-                   LastUsed, IsActive
-            FROM AI_GeneratedQuestions 
-            WHERE JobID = ? AND IsActive = 1
-            ORDER BY UsedCount DESC, QuestionID
+            SELECT questionid, questiontype, skillid, difficultylevel, questiontext, 
+                   expectedanswerkeywords, scoringrubric, usedcount, successrate, 
+                   lastused, isactive
+            FROM ai_generatedquestions 
+            WHERE jobid = ? AND isactive = TRUE
+            ORDER BY usedcount DESC, questionid
         `, [jobId]);
 
         res.json(questions);
@@ -561,16 +561,16 @@ router.post('/save-question', protect, authorize(2), async (req, res) => {
 
     try {
         // Verify recruiter
-        const recruiterCheck = await query("SELECT RecruiterID FROM Recruiters WHERE UserID = ?", [req.user.UserID]);
+        const recruiterCheck = await query("SELECT recruiterid FROM recruiters WHERE userid = ?", [req.user.userid]);
         if (recruiterCheck.length === 0) {
             return res.status(403).json({ error: "Unauthorized. Profile not registered as a valid Recruiter." });
         }
 
         // Insert the question
         const result = await query(`
-            INSERT INTO AI_GeneratedQuestions (JobID, SkillID, QuestionType, DifficultyLevel, QuestionText, ExpectedAnswerKeywords, ScoringRubric)
-            OUTPUT inserted.QuestionID
+            INSERT INTO ai_generatedquestions (jobid, skillid, questiontype, difficultylevel, questiontext, expectedanswerkeywords, scoringrubric)
             VALUES (?, ?, ?, ?, ?, ?, ?)
+            RETURNING questionid
         `, [
             jobId,
             skillId || null,
@@ -584,7 +584,7 @@ router.post('/save-question', protect, authorize(2), async (req, res) => {
         res.status(201).json({
             success: true,
             message: "Question saved successfully.",
-            questionId: result[0].QuestionID
+            questionId: result[0].questionid
         });
     } catch (err) {
         console.error("Save Question Error:", err.message);
@@ -606,7 +606,7 @@ router.post('/save-question', protect, authorize(2), async (req, res) => {
  */
 router.post('/optimize-rounds', protect, authorize(2), async (req, res) => {
     const { candidateId, jobId } = req.body;
-    const userID = req.user.UserID;
+    const userID = req.user.userid;
 
     if (!candidateId || !jobId) {
         return res.status(400).json({ error: "Missing required fields: candidateId, jobId." });
@@ -614,19 +614,19 @@ router.post('/optimize-rounds', protect, authorize(2), async (req, res) => {
 
     try {
         // Verify recruiter
-        const recruiterCheck = await query("SELECT RecruiterID FROM Recruiters WHERE UserID = ?", [userID]);
+        const recruiterCheck = await query("SELECT recruiterid FROM recruiters WHERE userid = ?", [userID]);
         if (recruiterCheck.length === 0) {
             return res.status(403).json({ error: "Unauthorized. Profile not registered as a valid Recruiter." });
         }
 
         // Verify candidate exists
-        const candidateCheck = await query("SELECT CandidateID, FullName FROM Candidates WHERE CandidateID = ?", [candidateId]);
+        const candidateCheck = await query("SELECT candidateid, fullname FROM candidates WHERE candidateid = ?", [candidateId]);
         if (candidateCheck.length === 0) {
             return res.status(404).json({ error: "Candidate not found." });
         }
 
         // Verify job exists
-        const jobCheck = await query("SELECT JobID, JobTitle FROM JobPostings WHERE JobID = ?", [jobId]);
+        const jobCheck = await query("SELECT jobid, jobtitle FROM jobpostings WHERE jobid = ?", [jobId]);
         if (jobCheck.length === 0) {
             return res.status(404).json({ error: "Job not found." });
         }
@@ -634,7 +634,7 @@ router.post('/optimize-rounds', protect, authorize(2), async (req, res) => {
         // Call the stored procedure
         let result;
         try {
-            result = await query("EXEC sp_OptimizeInterviewRounds ?, ?", [candidateId, jobId]);
+            result = await query("SELECT * FROM sp_optimizeround(?, ?)", [candidateId, jobId]);
         } catch (spError) {
             console.error("Stored Procedure Error:", spError.message);
             // Return fallback response if procedure fails
@@ -655,11 +655,11 @@ router.post('/optimize-rounds', protect, authorize(2), async (req, res) => {
                 success: true,
                 candidate: {
                     candidateId: candidateId,
-                    candidateName: candidateCheck[0].FullName
+                    candidateName: candidateCheck[0].fullname
                 },
                 job: {
                     jobId: jobId,
-                    jobTitle: jobCheck[0].JobTitle
+                    jobTitle: jobCheck[0].jobtitle
                 },
                 optimization: result[0]
             });

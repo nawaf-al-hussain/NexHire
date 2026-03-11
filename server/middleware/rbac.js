@@ -6,8 +6,8 @@
 const protect = (req, res, next) => {
     // Check for user populated by potential future JWT middleware,
     // or fallback to development headers
-    const userID = req.user ? req.user.UserID : req.headers['x-user-id'];
-    const roleID = req.user ? req.user.RoleID : req.headers['x-user-role'];
+    const userID = req.user ? (req.user.userid || req.user.UserID) : (req.headers['x-user-id'] || req.headers['X-User-Id']);
+    const roleID = req.user ? (req.user.roleid || req.user.RoleID) : (req.headers['x-user-role'] || req.headers['X-User-Role']);
 
     if (!userID && !req.user) {
         return res.status(401).json({ error: "Not authorized to access this resource." });
@@ -15,7 +15,12 @@ const protect = (req, res, next) => {
 
     // Populate req.user if not present (for development simplicity)
     if (!req.user && userID) {
-        req.user = { UserID: parseInt(userID), RoleID: parseInt(roleID) };
+        req.user = { 
+            UserID: parseInt(userID), 
+            userid: parseInt(userID),
+            RoleID: parseInt(roleID),
+            roleid: parseInt(roleID)
+        };
     }
 
     next();
@@ -23,7 +28,7 @@ const protect = (req, res, next) => {
 
 const authorize = (allowedRoles = []) => {
     return (req, res, next) => {
-        const userRole = req.user ? req.user.RoleID : parseInt(req.headers['x-user-role']);
+        const userRole = req.user ? (req.user.roleid || req.user.RoleID) : parseInt(req.headers['x-user-role'] || req.headers['X-User-Role']);
 
         if (!userRole) {
             return res.status(401).json({ error: "Authentication required." });

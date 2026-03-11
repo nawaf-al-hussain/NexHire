@@ -149,7 +149,7 @@ const ChatbotWidget = () => {
             {/* Floating Chat Button */}
             <button
                 onClick={() => setIsOpen(true)}
-                className={`fixed bottom-8 right-8 w-14 h-14 lg:w-16 lg:h-16 bg-indigo-600 rounded-full flex items-center justify-center shadow-2xl shadow-indigo-600/30 hover:scale-110 transition-all z-[100] ${isOpen ? 'hidden' : 'animate-bounce'}`}
+                className={`fixed bottom-8 right-8 w-14 h-14 lg:w-16 lg:h-16 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 rounded-full flex items-center justify-center shadow-2xl shadow-indigo-600/30 hover:scale-110 transition-all z-[100] ${isOpen ? 'hidden' : 'animate-bounce'}`}
             >
                 <MessageCircle size={24} className="text-white lg:w-7 lg:h-7" />
             </button>
@@ -157,9 +157,9 @@ const ChatbotWidget = () => {
             {/* Chat Modal */}
             {isOpen && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-end justify-end p-4 lg:p-8">
-                    <div className="w-full max-w-[400px] h-[500px] lg:h-[550px] glass-card rounded-[2rem] flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
+                    <div className="w-full max-w-[400px] h-[500px] lg:h-[550px] bg-[var(--panel-bg)] dark:bg-[var(--panel-bg)] border border-[var(--border-primary)] rounded-[2rem] flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
                         {/* Chat Header */}
-                        <div className="p-4 lg:p-6 bg-indigo-600 flex items-center justify-between flex-shrink-0">
+                        <div className="p-4 lg:p-6 bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700 flex items-center justify-between flex-shrink-0">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                                     <MessageCircle size={20} className="text-white" />
@@ -178,7 +178,7 @@ const ChatbotWidget = () => {
                         </div>
 
                         {/* Chat Messages */}
-                        <div className="flex-1 p-4 overflow-y-auto space-y-4">
+                        <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[var(--bg-secondary)]">
                             {messages.map((msg) => (
                                 <div
                                     key={msg.id}
@@ -191,7 +191,7 @@ const ChatbotWidget = () => {
                                     )}
                                     <div className={`max-w-[80%] ${msg.type === 'user'
                                         ? 'bg-indigo-500 text-white rounded-2xl rounded-tr-none'
-                                        : 'bg-[var(--bg-accent)] text-[var(--text-primary)] rounded-2xl rounded-tl-none'
+                                        : 'bg-[var(--bg-accent)] dark:bg-[var(--bg-primary)] text-[var(--text-primary)] rounded-2xl rounded-tl-none'
                                         } p-3 text-xs font-medium whitespace-pre-wrap`}>
                                         {msg.content}
                                         <div className={`text-[10px] mt-1 ${msg.type === 'user' ? 'text-white/60' : 'text-[var(--text-muted)]'}`}>
@@ -232,7 +232,7 @@ const ChatbotWidget = () => {
                                     <div className="w-8 h-8 bg-indigo-500 rounded-full flex-shrink-0 flex items-center justify-center">
                                         <MessageCircle size={14} className="text-white" />
                                     </div>
-                                    <div className="bg-[var(--bg-accent)] p-3 rounded-2xl rounded-tl-none">
+                                    <div className="bg-[var(--bg-accent)] dark:bg-[var(--bg-primary)] p-3 rounded-2xl rounded-tl-none">
                                         <Loader2 size={16} className="text-indigo-500 animate-spin" />
                                     </div>
                                 </div>
@@ -250,7 +250,7 @@ const ChatbotWidget = () => {
                                         <button
                                             key={faq.id}
                                             onClick={() => handleFaqClick(faq.question)}
-                                            className="text-[10px] px-3 py-1.5 bg-indigo-500/10 text-indigo-400 rounded-full hover:bg-indigo-500/20 transition-colors flex items-center gap-1"
+                                            className="text-[10px] px-3 py-1.5 bg-indigo-500/10 text-indigo-400 dark:bg-indigo-500/20 dark:text-indigo-300 rounded-full hover:bg-indigo-500/20 dark:hover:bg-indigo-500/30 transition-colors flex items-center gap-1"
                                         >
                                             <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
                                             {faq.question}
@@ -261,7 +261,7 @@ const ChatbotWidget = () => {
                         )}
 
                         {/* Chat Input */}
-                        <div className="p-4 border-t border-[var(--border-primary)] flex-shrink-0">
+                        <div className="p-4 border-t border-[var(--border-primary)] bg-[var(--panel-bg)] flex-shrink-0">
                             <div className="flex gap-2">
                                 <input
                                     ref={inputRef}
@@ -271,7 +271,7 @@ const ChatbotWidget = () => {
                                     onKeyPress={handleKeyPress}
                                     placeholder="Type your question..."
                                     disabled={isLoading}
-                                    className="flex-1 bg-[var(--bg-accent)] border border-[var(--border-primary)] rounded-2xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+                                    className="flex-1 bg-[var(--bg-accent)] dark:bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-2xl px-4 py-3 text-xs font-bold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-indigo-500 disabled:opacity-50"
                                 />
                                 <button
                                     onClick={() => sendMessage()}

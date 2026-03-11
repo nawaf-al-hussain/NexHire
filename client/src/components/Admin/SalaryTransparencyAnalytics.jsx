@@ -82,6 +82,14 @@ const SalaryTransparencyAnalytics = () => {
         ];
     };
 
+    // Force demo data on first load if API fails
+    const handleApiError = () => {
+        const demoData = generateDemoData();
+        setData(demoData);
+        calculateDemoStats(demoData);
+        setLoading(false);
+    };
+
     const calculateDemoStats = (demoData) => {
         const transparent = demoData.filter(d => d.IsTransparent);
         const hidden = demoData.filter(d => !d.IsTransparent);
@@ -143,19 +151,26 @@ const SalaryTransparencyAnalytics = () => {
     }
 
     return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <DollarSign className="w-5 h-5 text-emerald-500" />
-                    <h2 className="text-lg font-black uppercase tracking-tighter">Salary Transparency Analytics</h2>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+            {/* Gradient Header */}
+            <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-green-500/5 to-emerald-500/5 border border-green-500/20">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-500">
+                            <DollarSign size={28} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black uppercase tracking-tight">Salary Transparency Analytics</h2>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Compensation insights and transparency metrics</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={fetchData}
+                        className="p-3 rounded-xl hover:bg-[var(--bg-accent)] transition-colors"
+                    >
+                        <RefreshCw className="w-5 h-5 text-[var(--text-muted)]" />
+                    </button>
                 </div>
-                <button
-                    onClick={fetchData}
-                    className="p-2 rounded-xl hover:bg-[var(--bg-accent)] transition-colors"
-                >
-                    <RefreshCw className="w-4 h-4 text-[var(--text-muted)]" />
-                </button>
             </div>
 
             {/* Summary Stats Cards */}

@@ -4,10 +4,10 @@ import API_BASE from '../../apiConfig';
 import { useAuth } from '../../context/AuthContext';
 import {
     ShieldAlert, RefreshCw, Search, AlertTriangle,
-    User, Briefcase, Calendar, CheckCircle, XCircle
+    User, Briefcase, Calendar, CheckCircle, XCircle, ArrowLeft
 } from 'lucide-react';
 
-const AutoRejectionLog = () => {
+const AutoRejectionLog = ({ onGoBack }) => {
     const { user } = useAuth();
     const [autoRejected, setAutoRejected] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -65,6 +65,17 @@ const AutoRejectionLog = () => {
 
     return (
         <div className="space-y-8">
+            {/* Back Button */}
+            {onGoBack && (
+                <button
+                    onClick={onGoBack}
+                    className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                >
+                    <ArrowLeft size={18} />
+                    <span className="text-sm font-bold">Back to Job Roles</span>
+                </button>
+            )}
+
             {/* Header Card */}
             <div className="glass-card rounded-[3rem] p-8 bg-gradient-to-r from-rose-500/5 to-orange-500/5 border border-rose-500/20">
                 <div className="flex items-center justify-between">
